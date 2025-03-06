@@ -139,11 +139,17 @@ class LocalChatCompletion(LocalCompletionsAPI):
         base_url=None,
         tokenizer_backend=None,
         tokenized_requests=False,
+        api_key=None,
         **kwargs,
     ):
+        # Store API key if provided
+        self.provided_api_key = api_key
+        
+        # Warning about chat template flag
         eval_logger.warning(
             "chat-completions endpoint requires the `--apply_chat_template` flag."
         )
+        
         super().__init__(
             base_url=base_url,
             tokenizer_backend=tokenizer_backend,
@@ -213,6 +219,29 @@ class LocalChatCompletion(LocalCompletionsAPI):
             "Loglikelihood is not supported for chat completions. Consider using the completions API instead."
         )
 
+    @property
+    def api_key(self):
+        # First check if API key was provided directly in the constructor
+        if hasattr(self, 'provided_api_key') and self.provided_api_key:
+            return self.provided_api_key
+            
+        # Otherwise check environment variables
+        # First check if we need a specific provider's key
+        if self.base_url and "together.xyz" in self.base_url:
+            # Check for Together API key first
+            together_key = os.environ.get("TOGETHER_API_KEY")
+            if together_key:
+                return together_key
+                
+        # Fall back to OpenAI key
+        openai_key = os.environ.get("OPENAI_API_KEY")
+        if openai_key:
+            return openai_key
+            
+        raise ValueError(
+            "Please set the OPENAI_API_KEY or TOGETHER_API_KEY environment variable or provide an api_key parameter"
+        )
+
 
 @register_model(
     "openai-completions",
@@ -258,8 +287,11 @@ class OpenAIChatCompletion(LocalChatCompletion):
         base_url="https://api.openai.com/v1/chat/completions",
         tokenizer_backend=None,
         tokenized_requests=False,
+        api_key=None,
         **kwargs,
     ):
+        # Store API key if provided
+        self.provided_api_key = api_key
         if "o1" in kwargs.get("model", ""):
             eval_logger.warning(
                 "o1 models do not support `stop` and only support temperature=1"
@@ -273,21 +305,26 @@ class OpenAIChatCompletion(LocalChatCompletion):
 
     @cached_property
     def api_key(self):
-        """Override this property to return the API key for the API request."""
+        # First check if API key was provided directly in the constructor
+        if hasattr(self, 'provided_api_key') and self.provided_api_key:
+            return self.provided_api_key
+            
+        # Otherwise check environment variables
         # First check if we need a specific provider's key
-        if hasattr(self, 'base_url') and self.base_url:
-            if "together.xyz" in self.base_url:
-                key = os.environ.get("TOGETHER_API_KEY", None)
-                if key:
-                    return key
+        if self.base_url and "together.xyz" in self.base_url:
+            # Check for Together API key first
+            together_key = os.environ.get("TOGETHER_API_KEY")
+            if together_key:
+                return together_key
                 
-        # Fall back to default OpenAI key
-        key = os.environ.get("OPENAI_API_KEY", None)
-        if key is None:
-            raise ValueError(
-                "API key not found. Please set the appropriate API key environment variable (OPENAI_API_KEY or TOGETHER_API_KEY)."
-            )
-        return key
+        # Fall back to OpenAI key
+        openai_key = os.environ.get("OPENAI_API_KEY")
+        if openai_key:
+            return openai_key
+            
+        raise ValueError(
+            "Please set the OPENAI_API_KEY or TOGETHER_API_KEY environment variable or provide an api_key parameter"
+        )
 
     def loglikelihood(self, requests, **kwargs):
         raise NotImplementedError(

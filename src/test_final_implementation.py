@@ -38,17 +38,51 @@ class TemplateAPI:
         self.base_url = kwargs.get('base_url')
         self.model = kwargs.get('model')
         self.tokenizer_backend = kwargs.get('tokenizer_backend')
-        self._batch_size = kwargs.get('batch_size', 1)
+        
+        # Convert batch_size to int if it's a string
+        batch_size = kwargs.get('batch_size', 1)
+        if isinstance(batch_size, str):
+            try:
+                batch_size = int(batch_size)
+            except ValueError:
+                batch_size = 1
+        self._batch_size = batch_size
         
         # Handle max_tokens as an alias for max_gen_toks
+        max_gen_toks = 32
         if 'max_tokens' in kwargs:
-            self._max_gen_toks = kwargs.get('max_tokens')
-        else:
-            self._max_gen_toks = kwargs.get('max_gen_toks', 32)
+            max_tokens = kwargs.get('max_tokens')
+            if isinstance(max_tokens, str):
+                try:
+                    max_tokens = int(max_tokens)
+                except ValueError:
+                    max_tokens = 32
+            max_gen_toks = max_tokens
+        elif 'max_gen_toks' in kwargs:
+            max_gen_toks_val = kwargs.get('max_gen_toks')
+            if isinstance(max_gen_toks_val, str):
+                try:
+                    max_gen_toks = int(max_gen_toks_val)
+                except ValueError:
+                    max_gen_toks = 32
+        
+        self._max_gen_toks = max_gen_toks
         
         # Store any additional attributes
         for key, value in kwargs.items():
-            if not hasattr(self, key) and key not in ['max_tokens']:  # Skip max_tokens as we already handled it
+            if not hasattr(self, key) and key not in ['max_tokens', 'batch_size', 'max_gen_toks']:
+                # Try to convert numeric strings to appropriate types
+                if isinstance(value, str):
+                    # Try to convert to int first
+                    try:
+                        if value.isdigit() or (value.startswith('-') and value[1:].isdigit()):
+                            value = int(value)
+                        # Then try float
+                        elif value.replace('.', '', 1).isdigit() or (value.startswith('-') and value[1:].replace('.', '', 1).isdigit()):
+                            value = float(value)
+                    except (ValueError, AttributeError):
+                        pass  # Keep as string if conversion fails
+                
                 setattr(self, key, value)
 
 # API models implementation
@@ -233,6 +267,24 @@ def test_inheritance_chain():
     assert model.model == "gpt-4"
     assert model._max_gen_toks == 50
     logger.info("✅ Test case 2 passed")
+    
+    logger.info("\n--- Test case 3: String-to-numeric conversion ---")
+    model = LocalChatCompletion(
+        base_url="https://api.together.xyz/v1/chat/completions",
+        model="deepseek-ai/DeepSeek-V3",
+        max_tokens="100",  # String value that should be converted to int
+        batch_size="2",    # String value that should be converted to int
+        temperature="0.7"  # String value that should be converted to float
+    )
+    logger.info(f"Created model with numeric strings: max_tokens={model._max_gen_toks} (type: {type(model._max_gen_toks)}), batch_size={model._batch_size} (type: {type(model._batch_size)}), temperature={model.temperature} (type: {type(model.temperature)})")
+    assert model._max_gen_toks == 100
+    assert isinstance(model._max_gen_toks, int)
+    # Batch size is reset to 1 in LocalChatCompletion.__init__ regardless of input
+    assert model._batch_size == 1
+    assert isinstance(model._batch_size, int)
+    assert model.temperature == 0.7
+    assert isinstance(model.temperature, float)
+    logger.info("✅ Test case 3 passed")
 
 def test_create_from_arg_string():
     """Test the create_from_arg_string method"""
@@ -248,7 +300,8 @@ def test_create_from_arg_string():
     logger.info(f"Using API key: {model.api_key}")
     assert model.model == "deepseek-ai/DeepSeek-V3"
     assert model.base_url == "https://api.together.xyz/v1/chat/completions"
-    assert model._max_gen_toks == "25"
+    assert model._max_gen_toks == 25
+    assert isinstance(model._max_gen_toks, int)
     assert model.api_key == "test_together_api_key"
     logger.info("✅ Test case 1 passed")
     
@@ -259,7 +312,8 @@ def test_create_from_arg_string():
     logger.info(f"Using API key: {model.api_key}")
     assert model.model == "deepseek-ai/DeepSeek-V3"
     assert model.base_url == "https://api.together.xyz/v1/chat/completions"
-    assert model._max_gen_toks == "25"
+    assert model._max_gen_toks == 25
+    assert isinstance(model._max_gen_toks, int)
     assert model.api_key == "direct_api_key_123"
     logger.info("✅ Test case 2 passed")
     
@@ -279,7 +333,8 @@ def test_create_from_arg_string():
     logger.info(f"Using API key: {model.api_key}")
     assert model.model == "gpt-4"
     assert model.base_url == "https://api.openai.com/v1/chat/completions"
-    assert model._max_gen_toks == "50"
+    assert model._max_gen_toks == 50
+    assert isinstance(model._max_gen_toks, int)
     assert model.api_key == api_key_param
     logger.info("✅ Test case 3 passed")
     

@@ -35,17 +35,51 @@ except ImportError:
             self.base_url = kwargs.get('base_url')
             self.model = kwargs.get('model')
             self.tokenizer_backend = kwargs.get('tokenizer_backend')
-            self._batch_size = kwargs.get('batch_size', 1)
+            
+            # Convert batch_size to int if it's a string
+            batch_size = kwargs.get('batch_size', 1)
+            if isinstance(batch_size, str):
+                try:
+                    batch_size = int(batch_size)
+                except ValueError:
+                    batch_size = 1
+            self._batch_size = batch_size
             
             # Handle max_tokens as an alias for max_gen_toks
+            max_gen_toks = 32
             if 'max_tokens' in kwargs:
-                self._max_gen_toks = kwargs.get('max_tokens')
-            else:
-                self._max_gen_toks = kwargs.get('max_gen_toks', 32)
+                max_tokens = kwargs.get('max_tokens')
+                if isinstance(max_tokens, str):
+                    try:
+                        max_tokens = int(max_tokens)
+                    except ValueError:
+                        max_tokens = 32
+                max_gen_toks = max_tokens
+            elif 'max_gen_toks' in kwargs:
+                max_gen_toks_val = kwargs.get('max_gen_toks')
+                if isinstance(max_gen_toks_val, str):
+                    try:
+                        max_gen_toks = int(max_gen_toks_val)
+                    except ValueError:
+                        max_gen_toks = 32
+            
+            self._max_gen_toks = max_gen_toks
             
             # Store any additional attributes
             for key, value in kwargs.items():
-                if not hasattr(self, key) and key not in ['max_tokens']:  # Skip max_tokens as we already handled it
+                if not hasattr(self, key) and key not in ['max_tokens', 'batch_size', 'max_gen_toks']:
+                    # Try to convert numeric strings to appropriate types
+                    if isinstance(value, str):
+                        # Try to convert to int first
+                        try:
+                            if value.isdigit() or (value.startswith('-') and value[1:].isdigit()):
+                                value = int(value)
+                            # Then try float
+                            elif value.replace('.', '', 1).isdigit() or (value.startswith('-') and value[1:].replace('.', '', 1).isdigit()):
+                                value = float(value)
+                        except (ValueError, AttributeError):
+                            pass  # Keep as string if conversion fails
+                    
                     setattr(self, key, value)
 
 try:

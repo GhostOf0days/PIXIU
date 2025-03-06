@@ -72,7 +72,7 @@
     <img src='https://i.postimg.cc/k5WpYj0r/SWJTULogo.png' alt='Southwest Jiaotong University Logo' height='50px'>&emsp;
 </div>
 
------------------
+---
 
 ![](https://img.shields.io/badge/pixiu-v0.1-gold)
 ![](https://black.readthedocs.io/en/stable/_static/license.svg)
@@ -102,7 +102,7 @@ This repository and its contents are provided for **academic and educational pur
 
 🌏 We're pleased to invite you to attend the IJCAI2024-challenge, "Financial Challenges in Large Language Models - FinLLM", the starter-kit is available at [Starter-kit](README.ijcai_challenge.md).
 
-**Checkpoints:** 
+**Checkpoints:**
 
 - [FinMA v0.1 (NLP 7B version)](https://huggingface.co/TheFinAI/finma-7b-nlp)
 - [FinMA v0.1 (Full 7B version)](https://huggingface.co/TheFinAI/finma-7b-full)
@@ -173,7 +173,7 @@ This repository and its contents are provided for **academic and educational pur
 - [Polish (flare_cra_polish)](https://huggingface.co/datasets/daishen/cra-polish)
 - [Taiwan Economic Journal (flare_cra_taiwan)](https://huggingface.co/datasets/daishen/cra-taiwan)
 - [PortoSeguro (flare_cra_portoseguro)](https://huggingface.co/datasets/daishen/cra-portoseguro)
-- [Travle Insurance (flare_cra_travelinsurance)](https://huggingface.co/datasets/daishen/cra-travelinsurance) 
+- [Travle Insurance (flare_cra_travelinsurance)](https://huggingface.co/datasets/daishen/cra-travelinsurance)
 
 > Forecasting
 
@@ -197,7 +197,6 @@ The repository is organized into several key components, each serving a unique p
 ### Key Features
 
 - **Open resources**: PIXIU openly provides the financial LLM, instruction tuning data, and datasets included in the evaluation benchmark to encourage open research and transparency.
-  
 - **Multi-task**: The instruction tuning data and benchmark in PIXIU cover a diverse set of financial tasks, including four financial NLP tasks and one financial prediction task.
 - **Multi-modality**: PIXIU's instruction tuning data and benchmark consist of multi-modality financial data, including time series data from the stock movement prediction task. It covers various types of financial texts, including reports, news articles, tweets, and regulatory filings.
 - **Diversity**: Unlike previous benchmarks focusing mainly on financial NLP tasks, PIXIU's evaluation benchmark includes critical financial prediction tasks aligned with real-world scenarios, making it more challenging.
@@ -210,88 +209,86 @@ In this section, we provide a detailed performance analysis of FinMA compared to
 
 ### Tasks
 
-| Data                  | Task                             | Raw    | Data Types                | Modalities        | License         | Paper |
-| --------------------- | -------------------------------- | ------ | ------------------------- | ----------------- | --------------- | ----- |
-| FPB                   | sentiment analysis               | 4,845  | news                      | text              | CC BY-SA 3.0    | [[1]](#1) |
-| FiQA-SA               | sentiment analysis               | 1,173  | news headlines, tweets    | text              | Public          | [[2]](#2) |
-| TSA | sentiment analysis | 561 | news headlines | text | CC BY-NC-SA 4.0 | [[3]](#3)       |
-| FOMC                  | hawkish-dovish classification    | 496    | FOMC transcripts          | text              | CC BY-NC 4.0 | [[4]](#4)       |
-| Headlines             | news headline classification     | 11,412 | news headlines            | text              | CC BY-SA 3.0    | [[5]](#5) |
-| FinArg-ECC-Task1      | argument unit classification     | 969    | earnings conference call  | text              | CC BY-NC-SA 4.0 | [[6]](#6) |
-| FinArg-ECC-Task2      | argument relation classification | 690    | earnings conference call  | text              | CC BY-NC-SA 4.0 | [[6]](#6) |
-| Multifin EN        | multi-class classification | 546 | article headlines | text          | Public | [[7]](#7) |
-| M&A                     | deal completeness classification  | 500    | news articles, tweets           | text              | Public          | [[8]](#8) |
-| MLESG EN                | ESG Issue Identification          | 300    | news articles                   | text              | CC BY-NC-ND     | [[9]](#9) |
-| NER                     | named entity recognition          | 1,366  | financial agreements            | text              | CC BY-SA 3.0    | [[10]](#10) |
-| Finer Ord             | named entity recognition         | 1,080  | news articles             | text              | CC BY-NC 4.0    | [[11]](#11) |
-| FinRED                | relation extraction              | 1,070  | earning call transcipts   | text              | Public          | [[12]](#12) |
-| FinCausual 2020 Task1 | causal classification            | 8,630  | news articles, SEC        | text              | CC BY 4.0       | [[13]](#13) |
-| FinCausual 2020 Task2 | causal detection                 | 226    | news articles, SEC        | text              | CC BY 4.0       | [[13]](#13) |
-| FinQA                 | question answering               | 8,281  | earnings reports          | text, table       | MIT License     | [[14]](#14) |
-| TatQA                 | question answering               | 1,670  | financial reports         | text, table       | MIT License     | [[15]](#15) |
-| FNXL                  | numeric labeling                 | 318    | SEC                       | text              | Public          | [[16]](#16) |
-| FSRL                  | token classification             | 97     | news articles             | text              | MIT License     | [[17]](#17) |
-| ECTSUM                | text summarization               | 495    | earning call transcipts   | text              | Public          | [[18]](#18) |
-| EDTSUM                | text summarization               | 2000   | news articles             | text              | Public          | [[19]](#19) |
-| German                | credit scoring                   | 1000   | credit records            | table             | CC BY 4.0       | [[20]](#20) |
-| Australian            | credit scoring                   | 690    | credit records            | table             | CC BY 4.0       | [[21]](#21) |
-| Lending Club | credit scoring | 1,3453 | financial information | table | CC0 1.0 | [[22]](#26to32) |
-| BigData22             | stock movement prediction        | 7,164  | tweets, historical prices | text, time series | Public          | [[23]](#23) |
-| ACL18                 | stock movement prediction        | 27,053 | tweets, historical prices | text, time series | MIT License     | [[24]](#24) |
-| CIKM18                | stock movement prediction        | 4,967  | tweets, historical prices | text, time series | Public          | [[25]](#25) |
-| ConvFinQA             | multi-turn question answering    | 1,490  | earnings reports          | text, table       | MIT License     | [[26]](#26) |
-| Credit Card Fraud     | Fraud Detection                  | 11,392 | financial information     | table             | (DbCL) v1.0     | [[22]](#26to32) |
-| ccFraud               | Fraud Detection                  | 10,485 | financial information     | table             | Public          | [[22]](#26to32) |
-| Polish                | Financial Distress Identification| 8,681  | financial status features | table             | CC BY 4.0       | [[22]](#26to32) |
-|Taiwan Economic Journal| Financial Distress Identification| 6,819  | financial status features | table             | CC BY 4.0       | [[22]](#26to32) |
-| PortoSeguro           | Claim Analysis                   | 11,904 | claim and financial information | table             | Public          | [[22]](#26to32) |
-| Travel Insurance      | Claim Analysis                   | 12,665 | claim and financial information | table             | (ODbL) v1.0     | [[22]](#26to32) |
-
-
+| Data                    | Task                              | Raw    | Data Types                      | Modalities        | License         | Paper           |
+| ----------------------- | --------------------------------- | ------ | ------------------------------- | ----------------- | --------------- | --------------- |
+| FPB                     | sentiment analysis                | 4,845  | news                            | text              | CC BY-SA 3.0    | [[1]](#1)       |
+| FiQA-SA                 | sentiment analysis                | 1,173  | news headlines, tweets          | text              | Public          | [[2]](#2)       |
+| TSA                     | sentiment analysis                | 561    | news headlines                  | text              | CC BY-NC-SA 4.0 | [[3]](#3)       |
+| FOMC                    | hawkish-dovish classification     | 496    | FOMC transcripts                | text              | CC BY-NC 4.0    | [[4]](#4)       |
+| Headlines               | news headline classification      | 11,412 | news headlines                  | text              | CC BY-SA 3.0    | [[5]](#5)       |
+| FinArg-ECC-Task1        | argument unit classification      | 969    | earnings conference call        | text              | CC BY-NC-SA 4.0 | [[6]](#6)       |
+| FinArg-ECC-Task2        | argument relation classification  | 690    | earnings conference call        | text              | CC BY-NC-SA 4.0 | [[6]](#6)       |
+| Multifin EN             | multi-class classification        | 546    | article headlines               | text              | Public          | [[7]](#7)       |
+| M&A                     | deal completeness classification  | 500    | news articles, tweets           | text              | Public          | [[8]](#8)       |
+| MLESG EN                | ESG Issue Identification          | 300    | news articles                   | text              | CC BY-NC-ND     | [[9]](#9)       |
+| NER                     | named entity recognition          | 1,366  | financial agreements            | text              | CC BY-SA 3.0    | [[10]](#10)     |
+| Finer Ord               | named entity recognition          | 1,080  | news articles                   | text              | CC BY-NC 4.0    | [[11]](#11)     |
+| FinRED                  | relation extraction               | 1,070  | earning call transcipts         | text              | Public          | [[12]](#12)     |
+| FinCausual 2020 Task1   | causal classification             | 8,630  | news articles, SEC              | text              | CC BY 4.0       | [[13]](#13)     |
+| FinCausual 2020 Task2   | causal detection                  | 226    | news articles, SEC              | text              | CC BY 4.0       | [[13]](#13)     |
+| FinQA                   | question answering                | 8,281  | earnings reports                | text, table       | MIT License     | [[14]](#14)     |
+| TatQA                   | question answering                | 1,670  | financial reports               | text, table       | MIT License     | [[15]](#15)     |
+| FNXL                    | numeric labeling                  | 318    | SEC                             | text              | Public          | [[16]](#16)     |
+| FSRL                    | token classification              | 97     | news articles                   | text              | MIT License     | [[17]](#17)     |
+| ECTSUM                  | text summarization                | 495    | earning call transcipts         | text              | Public          | [[18]](#18)     |
+| EDTSUM                  | text summarization                | 2000   | news articles                   | text              | Public          | [[19]](#19)     |
+| German                  | credit scoring                    | 1000   | credit records                  | table             | CC BY 4.0       | [[20]](#20)     |
+| Australian              | credit scoring                    | 690    | credit records                  | table             | CC BY 4.0       | [[21]](#21)     |
+| Lending Club            | credit scoring                    | 1,3453 | financial information           | table             | CC0 1.0         | [[22]](#26to32) |
+| BigData22               | stock movement prediction         | 7,164  | tweets, historical prices       | text, time series | Public          | [[23]](#23)     |
+| ACL18                   | stock movement prediction         | 27,053 | tweets, historical prices       | text, time series | MIT License     | [[24]](#24)     |
+| CIKM18                  | stock movement prediction         | 4,967  | tweets, historical prices       | text, time series | Public          | [[25]](#25)     |
+| ConvFinQA               | multi-turn question answering     | 1,490  | earnings reports                | text, table       | MIT License     | [[26]](#26)     |
+| Credit Card Fraud       | Fraud Detection                   | 11,392 | financial information           | table             | (DbCL) v1.0     | [[22]](#26to32) |
+| ccFraud                 | Fraud Detection                   | 10,485 | financial information           | table             | Public          | [[22]](#26to32) |
+| Polish                  | Financial Distress Identification | 8,681  | financial status features       | table             | CC BY 4.0       | [[22]](#26to32) |
+| Taiwan Economic Journal | Financial Distress Identification | 6,819  | financial status features       | table             | CC BY 4.0       | [[22]](#26to32) |
+| PortoSeguro             | Claim Analysis                    | 11,904 | claim and financial information | table             | Public          | [[22]](#26to32) |
+| Travel Insurance        | Claim Analysis                    | 12,665 | claim and financial information | table             | (ODbL) v1.0     | [[22]](#26to32) |
 
 <span id="1">1.</span> Pekka Malo, Ankur Sinha, Pekka Korhonen, Jyrki Wallenius, and Pyry Takala. 2014. Good debt or bad debt: Detecting semantic orientations in economic texts. Journal of the Association for Information Science and Technology 65, 4 (2014), 782–796.
 
-<span id="2">2.</span> Macedo Maia, Siegfried Handschuh, André Freitas, Brian Davis, Ross McDermott, Manel Zarrouk, and Alexandra Balahur. 2018. Www’18 open challenge: financial opinion mining and question answering. In Companion proceedings of the the web conference 2018. 1941–1942.
+<span id="2">2.</span> Macedo Maia, Siegfried Handschuh, André Freitas, Brian Davis, Ross McDermott, Manel Zarrouk, and Alexandra Balahur. 2018. Www'18 open challenge: financial opinion mining and question answering. In Companion proceedings of the the web conference 2018. 1941–1942.
 
-<span id="3">3.</span> Keith Cortis, André Freitas, Tobias Daudert, Manuela Huerlimann, Manel Zarrouk, Siegfried Handschuh, and Brian Davis. 2017. [SemEval-2017 Task 5: Fine-Grained Sentiment Analysis on Financial Microblogs and News](https://aclanthology.org/S17-2089). In *Proceedings of the 11th International Workshop on Semantic Evaluation (SemEval-2017)*, pages 519–535, Vancouver, Canada. Association for Computational Linguistics.
+<span id="3">3.</span> Keith Cortis, André Freitas, Tobias Daudert, Manuela Huerlimann, Manel Zarrouk, Siegfried Handschuh, and Brian Davis. 2017. [SemEval-2017 Task 5: Fine-Grained Sentiment Analysis on Financial Microblogs and News](https://aclanthology.org/S17-2089). In _Proceedings of the 11th International Workshop on Semantic Evaluation (SemEval-2017)_, pages 519–535, Vancouver, Canada. Association for Computational Linguistics.
 
-<span id="4">4.</span> Agam Shah, Suvan Paturi, and Sudheer Chava. 2023. [Trillion Dollar Words: A New Financial Dataset, Task & Market Analysis](https://aclanthology.org/2023.acl-long.368). In *Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)*, pages 6664–6679, Toronto, Canada. Association for Computational Linguistics.
+<span id="4">4.</span> Agam Shah, Suvan Paturi, and Sudheer Chava. 2023. [Trillion Dollar Words: A New Financial Dataset, Task & Market Analysis](https://aclanthology.org/2023.acl-long.368). In _Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)_, pages 6664–6679, Toronto, Canada. Association for Computational Linguistics.
 
 <span id="5">5.</span> Ankur Sinha and Tanmay Khandait. 2021. Impact of news on the commodity market: Dataset and results. In Advances in Information and Communication: Proceedings of the 2021 Future of Information and Communication Conference (FICC), Volume 2. Springer, 589–601.
 
 <span id="6">6.</span> Chen C C, Lin C Y, Chiu C J, et al. [Overview of the NTCIR-17 FinArg-1 Task: Fine-grained argument understanding in financial analysis](https://research.nii.ac.jp/ntcir/workshop/OnlineProceedings17/pdf/ntcir/01-NTCIR17-OV-FINARG-ChenC.pdf)[C]//Proceedings of the 17th NTCIR Conference on Evaluation of Information Access Technologies, Tokyo, Japan. 2023.
 
-<span id="7">7.</span> Rasmus Jørgensen, Oliver Brandt, Mareike Hartmann, Xiang Dai, Christian Igel, and Desmond Elliott. 2023. [MultiFin: A Dataset for Multilingual Financial NLP](https://aclanthology.org/2023.findings-eacl.66). In *Findings of the Association for Computational Linguistics: EACL 2023*, pages 894–909, Dubrovnik, Croatia. Association for Computational Linguistics.
+<span id="7">7.</span> Rasmus Jørgensen, Oliver Brandt, Mareike Hartmann, Xiang Dai, Christian Igel, and Desmond Elliott. 2023. [MultiFin: A Dataset for Multilingual Financial NLP](https://aclanthology.org/2023.findings-eacl.66). In _Findings of the Association for Computational Linguistics: EACL 2023_, pages 894–909, Dubrovnik, Croatia. Association for Computational Linguistics.
 
-<span id="8">8.</span> Yang, L., Kenny, E.M., Ng, T.L., Yang, Y., Smyth, B., & Dong, R. (2020). [Generating Plausible Counterfactual Explanations for Deep Transformers in Financial Text Classification.](https://arxiv.org/abs/2010.12512) *International Conference on Computational Linguistics*.
+<span id="8">8.</span> Yang, L., Kenny, E.M., Ng, T.L., Yang, Y., Smyth, B., & Dong, R. (2020). [Generating Plausible Counterfactual Explanations for Deep Transformers in Financial Text Classification.](https://arxiv.org/abs/2010.12512) _International Conference on Computational Linguistics_.
 
-<span id="9">9.</span> Chung-Chi Chen, Yu-Min Tseng, Juyeon Kang, Anaïs Lhuissier, Min-Yuh Day, Teng-Tsai Tu, and Hsin-Hsi Chen. 2023. Multi-lingual esg issue identification. In *Proceedings of the Fifth Workshop on Financial Tech- nology and Natural Language Processing (FinNLP) and the Second Multimodal AI For Financial Fore- casting (Muffin)*.
+<span id="9">9.</span> Chung-Chi Chen, Yu-Min Tseng, Juyeon Kang, Anaïs Lhuissier, Min-Yuh Day, Teng-Tsai Tu, and Hsin-Hsi Chen. 2023. Multi-lingual esg issue identification. In _Proceedings of the Fifth Workshop on Financial Tech- nology and Natural Language Processing (FinNLP) and the Second Multimodal AI For Financial Fore- casting (Muffin)_.
 
 <span id="10">10.</span> Julio Cesar Salinas Alvarado, Karin Verspoor, and Timothy Baldwin. 2015. Domain adaption of named entity recognition to support credit risk assessment. In Proceedings of the Australasian Language Technology Association Workshop 2015. 84–90.
 
 <span id="11">11.</span> Shah A, Vithani R, Gullapalli A, et al. Finer: Financial named entity recognition dataset and weak-supervision model[J]. arXiv preprint arXiv:2302.11157, 2023.
 
-<span id="12">12.</span> Sharma, Soumya et al. “FinRED: A Dataset for Relation Extraction in Financial Domain.” *Companion Proceedings of the Web Conference 2022* (2022): n. pag.
+<span id="12">12.</span> Sharma, Soumya et al. "FinRED: A Dataset for Relation Extraction in Financial Domain." _Companion Proceedings of the Web Conference 2022_ (2022): n. pag.
 
-<span id="13">13.</span> Dominique Mariko, Hanna Abi-Akl, Estelle Labidurie, Stephane Durfort, Hugues De Mazancourt, and Mahmoud El-Haj. 2020. [The Financial Document Causality Detection Shared Task (FinCausal 2020)](https://aclanthology.org/2020.fnp-1.3). In *Proceedings of the 1st Joint Workshop on Financial Narrative Processing and MultiLing Financial Summarisation*, pages 23–32, Barcelona, Spain (Online). COLING.
+<span id="13">13.</span> Dominique Mariko, Hanna Abi-Akl, Estelle Labidurie, Stephane Durfort, Hugues De Mazancourt, and Mahmoud El-Haj. 2020. [The Financial Document Causality Detection Shared Task (FinCausal 2020)](https://aclanthology.org/2020.fnp-1.3). In _Proceedings of the 1st Joint Workshop on Financial Narrative Processing and MultiLing Financial Summarisation_, pages 23–32, Barcelona, Spain (Online). COLING.
 
 <span id="14">14.</span> Zhiyu Chen, Wenhu Chen, Charese Smiley, Sameena Shah, Iana Borova, Dylan Langdon, Reema Moussa, Matt Beane, Ting-Hao Huang, Bryan R Routledge, et al . 2021. FinQA: A Dataset of Numerical Reasoning over Financial Data. In Proceedings of the 2021 Conference on Empirical Methods in Natural Language Processing. 3697–3711.
 
-<span id="15">15.</span> Zhu, Fengbin, Wenqiang Lei, Youcheng Huang, Chao Wang, Shuo Zhang, Jiancheng Lv, Fuli Feng and Tat-Seng Chua. “TAT-QA: A Question Answering Benchmark on a Hybrid of Tabular and Textual Content in Finance.” *ArXiv* abs/2105.07624 (2021): n. pag.
+<span id="15">15.</span> Zhu, Fengbin, Wenqiang Lei, Youcheng Huang, Chao Wang, Shuo Zhang, Jiancheng Lv, Fuli Feng and Tat-Seng Chua. "TAT-QA: A Question Answering Benchmark on a Hybrid of Tabular and Textual Content in Finance." _ArXiv_ abs/2105.07624 (2021): n. pag.
 
-<span id="16">16.</span> Soumya Sharma, Subhendu Khatuya, Manjunath Hegde, Afreen Shaikh, Koustuv Dasgupta, Pawan Goyal, and Niloy Ganguly. 2023. [Financial Numeric Extreme Labelling: A dataset and benchmarking](https://aclanthology.org/2023.findings-acl.219). In *Findings of the Association for Computational Linguistics: ACL 2023*, pages 3550–3561, Toronto, Canada. Association for Computational Linguistics.
+<span id="16">16.</span> Soumya Sharma, Subhendu Khatuya, Manjunath Hegde, Afreen Shaikh, Koustuv Dasgupta, Pawan Goyal, and Niloy Ganguly. 2023. [Financial Numeric Extreme Labelling: A dataset and benchmarking](https://aclanthology.org/2023.findings-acl.219). In _Findings of the Association for Computational Linguistics: ACL 2023_, pages 3550–3561, Toronto, Canada. Association for Computational Linguistics.
 
-<span id="17">17.</span> Matthew Lamm, Arun Chaganty, Christopher D. Manning, Dan Jurafsky, and Percy Liang. 2018. [Textual Analogy Parsing: What’s Shared and What’s Compared among Analogous Facts](https://aclanthology.org/D18-1008). In *Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing*, pages 82–92, Brussels, Belgium. Association for Computational Linguistics.
+<span id="17">17.</span> Matthew Lamm, Arun Chaganty, Christopher D. Manning, Dan Jurafsky, and Percy Liang. 2018. [Textual Analogy Parsing: What's Shared and What's Compared among Analogous Facts](https://aclanthology.org/D18-1008). In _Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing_, pages 82–92, Brussels, Belgium. Association for Computational Linguistics.
 
-<span id="18">18.</span> Rajdeep Mukherjee, Abhinav Bohra, Akash Banerjee, Soumya Sharma, Manjunath Hegde, Afreen Shaikh, Shivani Shrivastava, Koustuv Dasgupta, Niloy Ganguly, Saptarshi Ghosh, and Pawan Goyal. 2022. [ECTSum: A New Benchmark Dataset For Bullet Point Summarization of Long Earnings Call Transcripts](https://aclanthology.org/2022.emnlp-main.748). In *Proceedings of the 2022 Conference on Empirical Methods in Natural Language Processing*, pages 10893–10906, Abu Dhabi, United Arab Emirates. Association for Computational Linguistics.
+<span id="18">18.</span> Rajdeep Mukherjee, Abhinav Bohra, Akash Banerjee, Soumya Sharma, Manjunath Hegde, Afreen Shaikh, Shivani Shrivastava, Koustuv Dasgupta, Niloy Ganguly, Saptarshi Ghosh, and Pawan Goyal. 2022. [ECTSum: A New Benchmark Dataset For Bullet Point Summarization of Long Earnings Call Transcripts](https://aclanthology.org/2022.emnlp-main.748). In _Proceedings of the 2022 Conference on Empirical Methods in Natural Language Processing_, pages 10893–10906, Abu Dhabi, United Arab Emirates. Association for Computational Linguistics.
 
-<span id="19">19.</span> Zhihan Zhou, Liqian Ma, and Han Liu. 2021. [Trade the Event: Corporate Events Detection for News-Based Event-Driven Trading](https://aclanthology.org/2021.findings-acl.186). In *Findings of the Association for Computational Linguistics: ACL-IJCNLP 2021*, pages 2114–2124, Online. Association for Computational Linguistics.
+<span id="19">19.</span> Zhihan Zhou, Liqian Ma, and Han Liu. 2021. [Trade the Event: Corporate Events Detection for News-Based Event-Driven Trading](https://aclanthology.org/2021.findings-acl.186). In _Findings of the Association for Computational Linguistics: ACL-IJCNLP 2021_, pages 2114–2124, Online. Association for Computational Linguistics.
 
 <span id="20">20.</span> Hofmann,Hans. (1994). Statlog (German Credit Data). UCI Machine Learning Repository. https://doi.org/10.24432/C5NC77.
 
 <span id="21">21.</span> Quinlan,Ross. Statlog (Australian Credit Approval). UCI Machine Learning Repository. https://doi.org/10.24432/C59012.
 
-<span id="26to32">22.</span> Duanyu Feng, Yongfu Dai, Jimin Huang, Yifang Zhang, Qianqian Xie, Weiguang Han, Alejandro Lopez-Lira, Hao Wang. 2023. Empowering Many, Biasing a Few: Generalist Credit Scoring through Large Language Models. *ArXiv* abs/2310.00566 (2023): n. pag.
+<span id="26to32">22.</span> Duanyu Feng, Yongfu Dai, Jimin Huang, Yifang Zhang, Qianqian Xie, Weiguang Han, Alejandro Lopez-Lira, Hao Wang. 2023. Empowering Many, Biasing a Few: Generalist Credit Scoring through Large Language Models. _ArXiv_ abs/2310.00566 (2023): n. pag.
 
 <span id="23">23.</span> Yejun Soun, Jaemin Yoo, Minyong Cho, Jihyeong Jeon, and U Kang. 2022. Accurate Stock Movement Prediction with Self-supervised Learning from Sparse Noisy Tweets. In 2022 IEEE International Conference on Big Data (Big Data). IEEE, 1691–1700.
 
@@ -301,14 +298,12 @@ In this section, we provide a detailed performance analysis of FinMA compared to
 
 <span id="26">26.</span> Zhiyu Chen, Shiyang Li, Charese Smiley, Zhiqiang Ma, Sameena Shah, and William Yang Wang. 2022. ConvFinQA: Exploring the Chain of Numerical Reasoning in Conversational Finance Question Answering. In Proceedings of the 2022 Conference on Empirical Methods in Natural Language Processing, pages 6279–6292, Abu Dhabi, United Arab Emirates. Association for Computational Linguistics.
 
-
-
-
 ### Evaluation
 
 #### Preparation
 
 ##### Locally install
+
 ```bash
 git clone https://github.com/The-FinAI/PIXIU.git --recursive
 cd PIXIU
@@ -316,10 +311,13 @@ pip install -r requirements.txt
 cd src/financial-evaluation
 pip install -e .[multilingual]
 ```
+
 ##### Docker image
+
 ```bash
 sudo bash scripts/docker_run.sh
 ```
+
 Above command starts a docker container, you can modify `docker_run.sh` to fit your environment. We provide pre-built image by running `sudo docker pull tothemoon/pixiu:latest`
 
 ```bash
@@ -338,13 +336,75 @@ docker run --gpus all --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 \
     $docker_user/pixiu:$tag \
     [--sshd_port 2201 --cmd "echo 'Hello, world!' && /bin/bash"]
 ```
+
 Arguments explain:
+
 - `[]` means ignoreable arguments
 - `HF_HOME`: huggingface cache dir
 - `sshd_port`: sshd port of the container, you can run `ssh -i private_key -p $sshd_port root@$ip` to connect to the container, default to 22001
 - `--rm`: remove the container when exit container (ie.`CTRL + D`)
 
+#### Using OpenAI ChatCompletions API
+
+PIXIU now supports evaluating models through the OpenAI ChatCompletions API (e.g., GPT-4, GPT-3.5-Turbo). To use this feature:
+
+1. Set your OpenAI API key as an environment variable:
+
+   ```bash
+   export OPENAI_API_KEY=your_api_key_here
+   ```
+
+2. Run the evaluation with the `openai-chat-completions` model type:
+   ```bash
+   python src/eval.py \
+     --model openai-chat-completions \
+     --model_args model=gpt-4-turbo,temperature=0.0,max_tokens=512 \
+     --tasks finqa \
+     --apply_chat_template
+   ```
+
+**Important notes:**
+
+- The `--apply_chat_template` flag is required when using the ChatCompletions API
+- You can customize various parameters through `--model_args`:
+  - `model`: The OpenAI model to use (e.g., `gpt-4-turbo`, `gpt-3.5-turbo`)
+  - `temperature`: Sampling temperature (default: 0.0)
+  - `max_tokens`: Maximum tokens to generate (default: 256)
+  - `top_p`: Nucleus sampling parameter (default: 1.0)
+  - `base_url`: Custom API endpoint URL (default: OpenAI's official endpoint)
+  - `num_concurrent`: Number of concurrent requests (default: 1)
+  - `max_retries`: Maximum retries on failure (default: 5)
+
+3. For Claude or other API models that use the same Chat Completions format:
+
+   ```bash
+   python src/eval.py \
+     --model openai-chat-completions \
+     --model_args model=claude-3-opus-20240229,base_url=https://your-proxy-endpoint/v1/chat/completions \
+     --tasks finqa \
+     --apply_chat_template
+   ```
+
+4. For local/self-hosted inference servers that support the OpenAI-compatible API:
+
+   ```bash
+   python src/eval.py \
+     --model local-chat-completions \
+     --model_args model=local-model-name,base_url=http://localhost:8000/v1/chat/completions \
+     --tasks finqa \
+     --apply_chat_template
+   ```
+
+   The `local-chat-completions` model type is ideal for:
+
+   - Self-hosted language models (e.g., via LM Studio, vLLM, TGI)
+   - Local APIs that follow the OpenAI ChatCompletions format
+   - Proxy services for other models that conform to the OpenAI API spec
+
+Note that multiple-choice tasks may not work with chat models since they don't provide the logprobs needed for these evaluations.
+
 #### Automated Task Assessment
+
 Before evaluation, please download [BART checkpoint](https://drive.google.com/u/0/uc?id=1_7JfF7KOInb7ZrxKHIigTMR4ChVET01m&export=download) to `src/metrics/BARTScore/bart_score.pth`.
 
 For automated evaluation, please follow these instructions:
@@ -363,7 +423,6 @@ python eval.py \
 More details can be found in the [lm_eval](https://github.com/EleutherAI/lm-evaluation-harness) documentation.
 
 2. Commercial APIs
-
 
 Please note, for tasks such as NER, the automated evaluation is based on a specific pattern. This might fail to extract relevant information in zero-shot settings, resulting in relatively lower performance compared to previous human-annotated results.
 
@@ -454,22 +513,22 @@ TASK_REGISTRY = {
 
 #### Predefined task metrics
 
-| Task                                     | Metric                                 | Illustration                                                 |
-| ---------------------------------------- | -------------------------------------- | ------------------------------------------------------------ |
-| Classification                           | Accuracy                               | This metric represents the ratio of correctly predicted observations to total observations. It is calculated as (True Positives + True Negatives) / Total Observations. |
-| Classification                           | F1 Score                               | The F1 Score represents the harmonic mean of precision and recall, thereby creating an equilibrium between these two factors. It proves particularly useful in scenarios where one factor bears more significance than the other. The score ranges from 0 to 1, with 1 signifying perfect precision and recall, and 0 indicating the worst case. Furthermore, we provide both 'weighted' and 'macro' versions of the F1 score. |
-| Classification                           | Missing Ratio                          | This metric calculates the proportion of responses where no options from the given choices in the task are returned. |
-| Classification                           | Matthews Correlation Coefficient (MCC) | The MCC is a metric that assesses the quality of binary classifications, producing a score ranging from -1 to +1. A score of +1 signifies perfect prediction, 0 denotes a prediction no better than random chance, and -1 indicates a completely inverse prediction. |
+| Task                                     | Metric                                 | Illustration                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ---------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Classification                           | Accuracy                               | This metric represents the ratio of correctly predicted observations to total observations. It is calculated as (True Positives + True Negatives) / Total Observations.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Classification                           | F1 Score                               | The F1 Score represents the harmonic mean of precision and recall, thereby creating an equilibrium between these two factors. It proves particularly useful in scenarios where one factor bears more significance than the other. The score ranges from 0 to 1, with 1 signifying perfect precision and recall, and 0 indicating the worst case. Furthermore, we provide both 'weighted' and 'macro' versions of the F1 score.                                                                                                                                                                                                                                                                   |
+| Classification                           | Missing Ratio                          | This metric calculates the proportion of responses where no options from the given choices in the task are returned.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Classification                           | Matthews Correlation Coefficient (MCC) | The MCC is a metric that assesses the quality of binary classifications, producing a score ranging from -1 to +1. A score of +1 signifies perfect prediction, 0 denotes a prediction no better than random chance, and -1 indicates a completely inverse prediction.                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | Sequential Labeling                      | F1 score                               | In the context of Sequential Labeling tasks, we utilize the F1 Score as computed by the `seqeval` library, a robust entity-level evaluation metric. This metric mandates an exact match of both the entity's span and type between the predicted and ground truth entities for a correct evaluation. True Positives (TP) represent correctly predicted entities, False Positives (FP) denote incorrectly predicted entities or entities with mismatched spans/types, and False Negatives (FN) signify missed entities from the ground truth. Precision, recall, and F1-score are then computed using these quantities, with the F1 Score representing the harmonic mean of precision and recall. |
-| Sequential Labeling                      | Label F1 score                         | This metric evaluates model performance based solely on the correctness of the labels predicted, without considering entity spans. |
-| Relation Extraction                      | Precision                              | Precision measures the proportion of correctly predicted relations out of all predicted relations. It is calculated as the number of True Positives (TP) divided by the sum of True Positives and False Positives (FP). |
-| Relation Extraction                      | Recall                                 | Recall measures the proportion of correctly predicted relations out of all actual relations. It is calculated as the number of True Positives (TP) divided by the sum of True Positives and False Negatives (FN). |
-| Relation Extraction                      | F1 score                               | The F1 Score is the harmonic mean of precision and recall, and it provides a balance between these two metrics. The F1 Score is at its best at 1 (perfect precision and recall) and worst at 0. |
-| Extractive and Abstractive Summarization | Rouge-N                                | This measures the overlap of N-grams (a contiguous sequence of N items from a given sample of text) between the system-generated summary and the reference summary. 'N' can be 1, 2, or more, with ROUGE-1 and ROUGE-2 being commonly used to assess unigram and bigram overlaps respectively. |
-| Extractive and Abstractive Summarization | Rouge-L                                | This metric evaluates the longest common subsequence (LCS) between the system and the reference summaries. LCS takes into account sentence level structure similarity naturally and identifies longest co-occurring in-sequence n-grams automatically. |
-| Question Answering                       | EmACC                                  | EMACC assesses the exact match between the model-generated response and the reference answer. In other words, the model-generated response is considered correct only if it matches the reference answer exactly, word-for-word. |
+| Sequential Labeling                      | Label F1 score                         | This metric evaluates model performance based solely on the correctness of the labels predicted, without considering entity spans.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Relation Extraction                      | Precision                              | Precision measures the proportion of correctly predicted relations out of all predicted relations. It is calculated as the number of True Positives (TP) divided by the sum of True Positives and False Positives (FP).                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Relation Extraction                      | Recall                                 | Recall measures the proportion of correctly predicted relations out of all actual relations. It is calculated as the number of True Positives (TP) divided by the sum of True Positives and False Negatives (FN).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Relation Extraction                      | F1 score                               | The F1 Score is the harmonic mean of precision and recall, and it provides a balance between these two metrics. The F1 Score is at its best at 1 (perfect precision and recall) and worst at 0.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Extractive and Abstractive Summarization | Rouge-N                                | This measures the overlap of N-grams (a contiguous sequence of N items from a given sample of text) between the system-generated summary and the reference summary. 'N' can be 1, 2, or more, with ROUGE-1 and ROUGE-2 being commonly used to assess unigram and bigram overlaps respectively.                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Extractive and Abstractive Summarization | Rouge-L                                | This metric evaluates the longest common subsequence (LCS) between the system and the reference summaries. LCS takes into account sentence level structure similarity naturally and identifies longest co-occurring in-sequence n-grams automatically.                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Question Answering                       | EmACC                                  | EMACC assesses the exact match between the model-generated response and the reference answer. In other words, the model-generated response is considered correct only if it matches the reference answer exactly, word-for-word.                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 
->  Additionally, you can determine if the labels should be lowercased during the matching process by specifying `LOWER_CASE` in your class definition. This is pertinent since labels are matched based on their appearance in the generated output. For tasks like examinations where the labels are a specific set of capitalized letters such as 'A', 'B', 'C', this should typically be set to False.
+> Additionally, you can determine if the labels should be lowercased during the matching process by specifying `LOWER_CASE` in your class definition. This is pertinent since labels are matched based on their appearance in the generated output. For tasks like examinations where the labels are a specific set of capitalized letters such as 'A', 'B', 'C', this should typically be set to False.
 
 ---
 
@@ -483,13 +542,13 @@ The dataset is multi-faceted, featuring tasks including sentiment analysis, news
 
 The table below summarizes the different tasks, their corresponding modalities, text types, and examples of the instructions used for each task:
 
-| **Task**                     | **Modalities**    | **Text Types**        | **Instructions Examples**                                    |
-| ---------------------------- | ----------------- | --------------------- | ------------------------------------------------------------ |
-| Sentiment Analysis           | Text              | news headlines,tweets | "Analyze the sentiment of this statement extracted from a financial news article.Provide your answer as either negative, positive or neutral. For instance, 'The company's stocks plummeted following the scandal.' would be classified as negative." |
-| News Headline Classification | Text              | News Headlines        | "Consider whether the headline mentions the price of gold. Is there a Price or Not in the gold commodity market indicated in the news headline? Please answer Yes or No." |
-| Named Entity Recognition     | Text              | financial agreements  | "In the sentences extracted from financial agreements in U.S. SEC filings, identify the named entities that represent a person ('PER'), an organization ('ORG'), or a location ('LOC'). The required answer format is: 'entity name, entity type'. For instance, in 'Elon Musk, CEO of SpaceX, announced the launch from Cape Canaveral.', the entities would be: 'Elon Musk, PER; SpaceX, ORG; Cape Canaveral, LOC'" |
+| **Task**                     | **Modalities**    | **Text Types**        | **Instructions Examples**                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ---------------------------- | ----------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sentiment Analysis           | Text              | news headlines,tweets | "Analyze the sentiment of this statement extracted from a financial news article.Provide your answer as either negative, positive or neutral. For instance, 'The company's stocks plummeted following the scandal.' would be classified as negative."                                                                                                                                                                                                                              |
+| News Headline Classification | Text              | News Headlines        | "Consider whether the headline mentions the price of gold. Is there a Price or Not in the gold commodity market indicated in the news headline? Please answer Yes or No."                                                                                                                                                                                                                                                                                                          |
+| Named Entity Recognition     | Text              | financial agreements  | "In the sentences extracted from financial agreements in U.S. SEC filings, identify the named entities that represent a person ('PER'), an organization ('ORG'), or a location ('LOC'). The required answer format is: 'entity name, entity type'. For instance, in 'Elon Musk, CEO of SpaceX, announced the launch from Cape Canaveral.', the entities would be: 'Elon Musk, PER; SpaceX, ORG; Cape Canaveral, LOC'"                                                              |
 | Question Answering           | Text              | earnings reports      | "In the context of this series of interconnected finance-related queries and the additional information provided by the pretext, table data, and post text from a company's financial filings, please provide a response to the final question. This may require extracting information from the context and performing mathematical calculations. Please take into account the information provided in the preceding questions and their answers when formulating your response:" |
-| Stock Movement Prediction    | Text, Time-Series | tweets, Stock Prices  | "Analyze the information and social media posts to determine if the closing price of *\{tid\}* will ascend or descend at *\{point\}*. Please respond with either Rise or Fall." |
+| Stock Movement Prediction    | Text, Time-Series | tweets, Stock Prices  | "Analyze the information and social media posts to determine if the closing price of _\{tid\}_ will ascend or descend at _\{point\}_. Please respond with either Rise or Fall."                                                                                                                                                                                                                                                                                                    |
 
 ### Dataset Statistics
 
@@ -508,7 +567,7 @@ The dataset contains a vast amount of instruction data samples (136K), allowing 
 | CIKM18    | stock movement prediction    | 4,967  | 4,967       | tweets, historical prices | text, time series | Public       | [9]            |
 
 1. Pekka Malo, Ankur Sinha, Pekka Korhonen, Jyrki Wallenius, and Pyry Takala. 2014. Good debt or bad debt: Detecting semantic orientations in economic texts. Journal of the Association for Information Science and Technology 65, 4 (2014), 782–796.
-2. Macedo Maia, Siegfried Handschuh, André Freitas, Brian Davis, Ross McDermott, Manel Zarrouk, and Alexandra Balahur. 2018. Www’18 open challenge: financial opinion mining and question answering. In Companion proceedings of the the web conference 2018. 1941–1942
+2. Macedo Maia, Siegfried Handschuh, André Freitas, Brian Davis, Ross McDermott, Manel Zarrouk, and Alexandra Balahur. 2018. Www'18 open challenge: financial opinion mining and question answering. In Companion proceedings of the the web conference 2018. 1941–1942
 3. Ankur Sinha and Tanmay Khandait. 2021. Impact of news on the commodity market: Dataset and results. In Advances in Information and Communication: Proceedings of the 2021 Future of Information and Communication Conference (FICC), Volume 2. Springer, 589–601
 4. Julio Cesar Salinas Alvarado, Karin Verspoor, and Timothy Baldwin. 2015. Domain adaption of named entity recognition to support credit risk assessment. In Proceedings of the Australasian Language Technology Association Workshop 2015. 84–90.
 5. Zhiyu Chen, Wenhu Chen, Charese Smiley, Sameena Shah, Iana Borova, Dylan Langdon, Reema Moussa, Matt Beane, Ting-Hao Huang, Bryan R Routledge, et al . 2021. FinQA: A Dataset of Numerical Reasoning over Financial Data. In Proceedings of the 2021 Conference on Empirical Methods in Natural Language Processing. 3697–3711.
@@ -525,19 +584,19 @@ The format should look like this:
 
 ```json
 {
-    "id": "unique id",
-    "conversations": [
-        {
-            "from": "human",
-            "value": "Your prompt and text"
-        },
-        {
-            "from": "agent",
-            "value": "Your answer"
-        }
-    ],
-    "text": "Text to be classified",
-    "label": "Your label"
+  "id": "unique id",
+  "conversations": [
+    {
+      "from": "human",
+      "value": "Your prompt and text"
+    },
+    {
+      "from": "agent",
+      "value": "Your answer"
+    }
+  ],
+  "text": "Text to be classified",
+  "label": "Your label"
 }
 ```
 
@@ -548,14 +607,13 @@ Here's what each field means:
 - "text": the text to be classified.
 - "label": the ground truth label for the text.
 
-
 The first turn in the "conversations" list should always be from "human", and contain your prompt and the text. The second turn should be from "agent", and contain your answer.
 
 ---
 
 ## FinMA v0.1: Financial Large Language Model
 
-We are pleased to introduce the first version of FinMA, including three models FinMA-7B, FinMA-7B-full, FinMA-30B, fine-tuned on LLaMA 7B and LLaMA-30B. FinMA-7B and FinMA-30B are trained with the NLP instruction data, while FinMA-7B-full is trained with the full instruction data from FIT covering both NLP and prediction tasks. 
+We are pleased to introduce the first version of FinMA, including three models FinMA-7B, FinMA-7B-full, FinMA-30B, fine-tuned on LLaMA 7B and LLaMA-30B. FinMA-7B and FinMA-30B are trained with the NLP instruction data, while FinMA-7B-full is trained with the full instruction data from FIT covering both NLP and prediction tasks.
 
 FinMA v0.1 is now available on [Huggingface](https://huggingface.co/TheFinAI/finma-7b-nlp) for public use. We look forward to the valuable contributions that this initial version will make to the financial NLP field and encourage users to apply it to various financial tasks and scenarios. We also invite feedback and shared experiences to help improve future versions.
 
@@ -571,13 +629,15 @@ FinMem is a novel LLM-based agent framework devised for financial decision-makin
 
 Step 1: Set environmental variables
 in `.env` add HUGGINGFACE TOKEN and OPENAI API KEY as needed.
+
 ```bash
 OPENAI_API_KEY = "<Your OpenAI Key>"
 HF_TOKEN = "<Your HF token>"
 ```
 
 Step 2: Set endpoint URL in `config.toml`
-Use endpoint URL to deploy models based on the model of choice (OPENAI, Gemini, open source models on HuggingFace, etc.). For open-source models on HuggingFace, one choice for generating TGI endpoints is through RunPod. 
+Use endpoint URL to deploy models based on the model of choice (OPENAI, Gemini, open source models on HuggingFace, etc.). For open-source models on HuggingFace, one choice for generating TGI endpoints is through RunPod.
+
 ```bash
 [chat]
 model = "tgi"
@@ -587,20 +647,24 @@ tokenization_model_name = "<model name>"
 ```
 
 Step 3: Build Docker Image and Container
+
 ```bash
-docker build -t test-finmem .devcontainer/. 
+docker build -t test-finmem .devcontainer/.
 ```
+
 start container:
+
 ```bash
 docker run -it --rm -v $(pwd):/finmem test-finmem bash
 ```
 
 Step 4: Start Simulation!
+
 ```bash
- Usage: run.py sim [OPTIONS]                                                                                                                
-                                                                                                                                            
- Start Simulation                                                                                                                           
-                                                                                                                                            
+ Usage: run.py sim [OPTIONS]
+
+ Start Simulation
+
 ╭─ Options ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ --market-data-path    -mdp      TEXT  The environment data pickle path [default: data/06_input/subset_symbols.pkl]                       │
 │ --start-time          -st       TEXT  The training or test start time [default: 2022-06-30 For Ticker 'TSLA']                                                               │
@@ -612,14 +676,16 @@ Step 4: Start Simulation!
 │ --trained-agent-path  -tap      TEXT  Only used in test mode, the path of trained agent [default: None. Can be changed to data/05_train_model_output OR data/06_train_checkpoint]                                  │
 │ --help                                Show this message and exit.                                                                        │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-                              
+
 ```
+
 Example Usage:
+
 ```bash
 python run.py sim --market-data-path data/03_model_input/tsla.pkl --start-time 2022-06-30 --end-time 2022-10-11 --run-model train --config-path config/tsla_tgi_config.toml --checkpoint-path data/06_train_checkpoint --result-path data/05_train_model_output
 ```
 
-There are also checkpoint functionalities. For more details please visit [FinMem Repository](https://github.com/pipiku915/FinMem-LLM-StockTrading) directly. 
+There are also checkpoint functionalities. For more details please visit [FinMem Repository](https://github.com/pipiku915/FinMem-LLM-StockTrading) directly.
 
 ---
 
@@ -629,7 +695,7 @@ If you use PIXIU in your work, please cite our paper.
 
 ```
 @misc{xie2023pixiu,
-      title={PIXIU: A Large Language Model, Instruction Data and Evaluation Benchmark for Finance}, 
+      title={PIXIU: A Large Language Model, Instruction Data and Evaluation Benchmark for Finance},
       author={Qianqian Xie and Weiguang Han and Xiao Zhang and Yanzhao Lai and Min Peng and Alejandro Lopez-Lira and Jimin Huang},
       year={2023},
       eprint={2306.05443},
@@ -638,7 +704,7 @@ If you use PIXIU in your work, please cite our paper.
 }
 
 @misc{xie2024FinBen,
-      title={The FinBen: An Holistic Financial Benchmark for Large Language Models}, 
+      title={The FinBen: An Holistic Financial Benchmark for Large Language Models},
       author={Qianqian Xie and Weiguang Han and Zhengyu Chen and Ruoyu Xiang and Xiao Zhang and Yueru He and Mengxi Xiao and Dong Li and Yongfu Dai and Duanyu Feng and Yijing Xu and Haoqiang Kang and Ziyan Kuang and Chenhan Yuan and Kailai Yang and Zheheng Luo and Tianlin Zhang and Zhiwei Liu and Guojun Xiong and Zhiyang Deng and Yuechen Jiang and Zhiyuan Yao and Haohang Li and Yangyang Yu and Gang Hu and Jiajia Huang and Xiao-Yang Liu and Alejandro Lopez-Lira and Benyou Wang and Yanzhao Lai and Hao Wang and Min Peng and Sophia Ananiadou and Jimin Huang},
       year={2024},
       eprint={2402.12659},
@@ -654,4 +720,3 @@ PIXIU is licensed under [MIT]. For more details, please see the [MIT](LICENSE) f
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=The-FinAI/PIXIU&type=Date)](https://star-history.com/#The-FinAI/PIXIU&Date)
-

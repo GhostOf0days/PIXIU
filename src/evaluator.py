@@ -2,6 +2,7 @@ import collections
 import itertools
 import numpy as np
 import random
+import hashlib
 
 from lm_eval.utils import positional_deprecated, run_task_tests
 import lm_eval.metrics
@@ -10,7 +11,7 @@ import lm_eval.tasks
 import lm_eval.base
 
 from model_prompt import MODEL_PROMPT_MAP
-from chatlm import ChatLM
+from chatlm import ChatLM, OpenAIChatCompletionLM
 import tasks as ta
 
 @positional_deprecated
@@ -30,29 +31,29 @@ def simple_evaluate(
     decontamination_ngrams_path=None,
     write_out=False,
     output_base_path=None,
-    model_prompt=None
+    model_prompt=None,
+    apply_chat_template=False
 ):
     """Instantiate and evaluate a model on a list of tasks.
 
     :param model: Union[str, LM]
-        Name of model or LM object, see lm_eval.models.get_model
+        Name of model, transformers.PreTrainedModel instance, or LM instance
     :param model_args: Optional[str]
-        String arguments for each model class, see LM.create_from_arg_string.
-        Ignored if `model` argument is a LM object.
+        String arguments for from_pretrained initialization of transformers.PreTrainedModel
     :param tasks: list[Union[str, Task]]
-        List of task names or Task objects. Task objects will be taken to have name task.EVAL_HARNESS_NAME if defined and type(task).__name__ otherwise.
+        List of task names or Task instances
     :param num_fewshot: int
         Number of examples in few-shot context
-    :param batch_size: int or str, optional
+    :param batch_size: int, optional
         Batch size for model
     :param max_batch_size: int, optional
-        Maximal batch size to try with automatic batch size detection
+        Maximum batch size for model
     :param device: str, optional
         PyTorch device (e.g. "cpu" or "cuda:0") for running models
     :param no_cache: bool
-        Whether or not to cache
-    :param limit: int or float, optional
-        Limit the number of examples per task (only use this for testing), If <1, limit is a percentage of the total number of examples.
+        Whether to skip evaluating on cached results
+    :param limit: int, optional
+        Limit the number of examples per task (only use this for testing)
     :param bootstrap_iters:
         Number of iterations for bootstrap statistics
     :param description_dict: dict[str, str]
@@ -60,9 +61,13 @@ def simple_evaluate(
     :param check_integrity: bool
         Whether to run the relevant part of the test suite for the tasks
     :param write_out: bool
-        If True, write details about prompts and logits to json for all tasks
+        If True, write out an example document and model input for checking task integrity
     :param output_base_path: str, optional
-        Directory to which detailed eval info will be written. Defaults to present working dir.
+        Directory to which to write out document and model input if write_out is True
+    :param model_prompt: str, optional
+        Prompt to add to the model input. If None, no prompt is added.
+    :param apply_chat_template: bool
+        Whether to apply a chat template to the dataset examples, relevant for chat models
     :return
         Dictionary of results
     """
@@ -72,16 +77,62 @@ def simple_evaluate(
     assert len(tasks) != 0, "No tasks specified"
 
     if isinstance(model, str):
-        if model_args is None:
-            model_args = ""
-        if model[:3] != "gpt":
-            lm = lm_eval.models.get_model(model).create_from_arg_string(
-                model_args, {"batch_size": batch_size, "max_batch_size": max_batch_size, "device": device}
-            )
+        import lm_eval.models
+        
+        lm = lm_eval.models.get_model(model).create_from_arg_string(
+            model_args,
+            {
+                "batch_size": batch_size,
+                "max_batch_size": max_batch_size,
+                "device": device,
+            },
+        )
+            
+        # Override the model name with model args
+        if model == "openai-chat-completions" or model == "local-chat-completions":
+            base_model_name = model
+            model_specific_args = model_args.split(",")
+            for arg in model_specific_args:
+                if arg.startswith("model="):
+                    chosen_model = arg[len("model="):]
+                    model = f"{chosen_model} ({base_model_name})"
+                    break
+            if apply_chat_template:
+                # This is passed to the evaluator but not used to construct the API call
+                lm.apply_chat_template = True
+            else:
+                print("Warning: The apply_chat_template flag is required when using chat models. Adding it automatically.")
+                lm.apply_chat_template = True
+    elif isinstance(model, str):
+        if model == "openai-chat-completions" and model_args:
+            base_model_name = model  
+            
+            model_specific_args = model_args.split(",")
+            for arg in model_specific_args:
+                if arg.startswith("model="):  
+                    chosen_model = arg[len("model="):]
+                    model = f"{chosen_model} ({base_model_name})"
+                    break
+                    
+        from src.chatlm import OpenAIChatCompletionLM
+        if model == "openai-chat-completions":
+            lm = OpenAIChatCompletionLM(
+                model=model_args.split("model=")[1].split(",")[0] if model_args and "model=" in model_args else "gpt-3.5-turbo",
+                apply_chat_template=apply_chat_template,
+                **{k: v for k, v in [arg.split("=") for arg in model_args.split(",")] if k != "model"} if model_args else {}
+            )    
         else:
-            lm = ChatLM(model)
+            import lm_eval.models
+        
+            lm = lm_eval.models.get_model(model).create_from_arg_string(
+                model_args,
+                {
+                    "batch_size": batch_size,
+                    "max_batch_size": max_batch_size,
+                    "device": device,
+                },
+            )
     else:
-        assert isinstance(model, lm_eval.base.LM)
         lm = model
 
     if not no_cache:
@@ -90,14 +141,22 @@ def simple_evaluate(
             "lm_cache/"
             + (model if isinstance(model, str) else model.model.config._name_or_path)
             + "_"
-            + model_args.replace("=", "-").replace(",", "_").replace("/", "-")
-            + ".db",
+            + str(hashlib.md5(str(tasks).encode("utf-8")).hexdigest()),
         )
 
     task_dict = ta.get_task_dict(tasks)
 
     if check_integrity:
         run_task_tests(task_list=tasks)
+
+    if write_out:
+        import pathlib
+
+        output_base_path = pathlib.Path(output_base_path) if output_base_path else pathlib.Path(".")
+        try:
+            output_base_path.mkdir(parents=True, exist_ok=True)
+        except FileExistsError:
+            pass
 
     results = evaluate(
         lm=lm,
@@ -109,16 +168,15 @@ def simple_evaluate(
         decontamination_ngrams_path=decontamination_ngrams_path,
         write_out=write_out,
         output_base_path=output_base_path,
-        model_prompt=model_prompt
+        model_prompt=model_prompt,
     )
 
-    # add info about the model and few shot config
+    # add info about the model and few-shot config
     results["config"] = {
-        "model": (model if isinstance(model, str) else model.model.config._name_or_path),
+        "model": model if isinstance(model, str) else model.model.config._name_or_path,
         "model_args": model_args,
         "num_fewshot": num_fewshot,
         "batch_size": batch_size,
-        "batch_sizes": list(lm.batch_sizes.values()) if hasattr(lm, "batch_sizes") else [],
         "device": device,
         "no_cache": no_cache,
         "limit": limit,

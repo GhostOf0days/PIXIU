@@ -7,12 +7,23 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 # Try to import the register_model decorator, but don't fail if it's not available
 try:
     from lm_eval.api.registry import register_model
+    from lm_eval import utils
 except ImportError:
     # Create a dummy decorator if register_model is not available
     def register_model(name):
         def decorator(cls):
             return cls
         return decorator
+    
+    # Create a simple dictionary parser if utils is not available
+    class utils:
+        @staticmethod
+        def simple_parse_args_string(arg_string):
+            """Parse a comma-separated string of key=value pairs into a dictionary."""
+            if arg_string == "":
+                return {}
+            return {k.strip(): v.strip() for k, v in 
+                   [item.split("=", 1) for item in arg_string.split(",")]}
 
 try:
     from lm_eval.models.api_models import TemplateAPI
@@ -153,14 +164,32 @@ class LocalChatCompletion(LocalCompletionsAPI):
         super().__init__(
             base_url=base_url,
             tokenizer_backend=tokenizer_backend,
-            tokenized_requests=tokenized_requests,
             **kwargs,
         )
+        self.tokenized_requests = tokenized_requests
+        
         if self._batch_size > 1:
             eval_logger.warning(
                 "Chat completions does not support batching. Defaulting to batch size 1."
             )
             self._batch_size = 1
+        
+    @classmethod
+    def create_from_arg_string(cls, arg_string, additional_config=None):
+        """
+        Create an instance from a string of arguments.
+        
+        Args:
+            arg_string: Comma-separated string of key=value pairs
+            additional_config: Additional config parameters
+            
+        Returns:
+            An instance of LocalChatCompletion
+        """
+        additional_config = {} if additional_config is None else additional_config
+        args = utils.simple_parse_args_string(arg_string)
+        args2 = {k: v for k, v in additional_config.items() if v is not None}
+        return cls(**args, **args2)
 
     def _create_payload(
         self,
@@ -292,17 +321,20 @@ class OpenAIChatCompletion(LocalChatCompletion):
     ):
         # Store API key if provided
         self.provided_api_key = api_key
+        
+        # Warning about response_format for O1 models
         if "o1" in kwargs.get("model", ""):
             eval_logger.warning(
-                "o1 models do not support `stop` and only support temperature=1"
+                "For O1 models, consider using 'response_format={'type': 'text'}' for better quality responses."
             )
+            
         super().__init__(
             base_url=base_url,
             tokenizer_backend=tokenizer_backend,
             tokenized_requests=tokenized_requests,
             **kwargs,
         )
-
+    
     @cached_property
     def api_key(self):
         # First check if API key was provided directly in the constructor
@@ -325,6 +357,23 @@ class OpenAIChatCompletion(LocalChatCompletion):
         raise ValueError(
             "Please set the OPENAI_API_KEY or TOGETHER_API_KEY environment variable or provide an api_key parameter"
         )
+        
+    @classmethod
+    def create_from_arg_string(cls, arg_string, additional_config=None):
+        """
+        Create an instance from a string of arguments.
+        
+        Args:
+            arg_string: Comma-separated string of key=value pairs
+            additional_config: Additional config parameters
+            
+        Returns:
+            An instance of OpenAIChatCompletion
+        """
+        additional_config = {} if additional_config is None else additional_config
+        args = utils.simple_parse_args_string(arg_string)
+        args2 = {k: v for k, v in additional_config.items() if v is not None}
+        return cls(**args, **args2)
 
     def loglikelihood(self, requests, **kwargs):
         raise NotImplementedError(

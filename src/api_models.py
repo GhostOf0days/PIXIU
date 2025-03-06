@@ -117,42 +117,69 @@ class LocalCompletionsAPI(TemplateAPI):
             base_url=base_url, tokenizer_backend=tokenizer_backend, **kwargs
         )
 
-    def _create_payload(
-        self,
-        messages: Union[List[List[int]], List[dict], List[str], str],
-        generate=False,
-        gen_kwargs: Optional[dict] = None,
-        seed: int = 1234,
-        eos=None,
-        **kwargs,
-    ) -> dict:
-        if generate:
-            gen_kwargs.pop("do_sample", False)
+    def _create_payload(self, messages, generate=True, gen_kwargs=None, logit_bias=None):
+        """
+        Create the payload for the API request.
+        
+        Args:
+            messages: List of message objects
+            generate: Whether to generate text or calculate logprobs
+            gen_kwargs: Generation parameters
+            logit_bias: Logit bias parameters
+            
+        Returns:
+            Dict containing the API request payload
+        """
+        # Enable debug mode
+        DEBUG_NER = os.environ.get("DEBUG_NER", "0") == "1"
+        
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "temperature": 0.0,  # Default to 0.0 for deterministic outputs
+        }
+        
+        # Add generation parameters if provided
+        if generate and gen_kwargs:
+            # Add max_tokens parameter
             if "max_tokens" in gen_kwargs:
-                max_tokens = gen_kwargs.pop("max_tokens")
-            else:
-                max_tokens = gen_kwargs.pop("max_gen_toks", self._max_gen_toks)
-            temperature = gen_kwargs.pop("temperature", 0)
-            stop = handle_stop_sequences(gen_kwargs.pop("until", None), eos)
-            return {
-                "prompt": messages,
-                "model": self.model,
-                "max_tokens": max_tokens,
-                "temperature": temperature,
-                "stop": stop,
-                "seed": seed,
-                **gen_kwargs,
-            }
-        else:
-            return {
-                "model": self.model,
-                "prompt": messages,
-                "temperature": 0,
-                "max_tokens": 1,
-                "logprobs": 1,
-                "seed": seed,
-                "echo": True,
-            }
+                payload["max_tokens"] = gen_kwargs["max_tokens"]
+            elif hasattr(self, "_max_gen_toks"):
+                payload["max_tokens"] = self._max_gen_toks
+            
+            # Add stop parameter if provided
+            if "until" in gen_kwargs and gen_kwargs["until"]:
+                # Convert to list if not already
+                until = gen_kwargs["until"]
+                if not isinstance(until, list):
+                    until = [until]
+                
+                # Filter out None values and empty strings
+                until = [u for u in until if u]
+                
+                # Add to payload if not empty
+                if until:
+                    payload["stop"] = until
+            
+            # Add other parameters
+            if "temperature" in gen_kwargs:
+                payload["temperature"] = gen_kwargs["temperature"]
+                
+            if "top_p" in gen_kwargs:
+                payload["top_p"] = gen_kwargs["top_p"]
+                
+            if "top_k" in gen_kwargs:
+                payload["top_k"] = gen_kwargs["top_k"]
+        
+        # Add logit bias if provided
+        if logit_bias:
+            payload["logit_bias"] = logit_bias
+        
+        if DEBUG_NER:
+            import logging
+            logging.info(f"Created payload for API request: {payload}")
+        
+        return payload
 
     @staticmethod
     def parse_logprobs(
@@ -182,14 +209,58 @@ class LocalCompletionsAPI(TemplateAPI):
 
     @staticmethod
     def parse_generations(outputs: Union[Dict, List[Dict]], **kwargs) -> List[str]:
+        """
+        Parse the generations from the API response.
+        
+        This implementation follows the lm-evaluation-harness format for parsing responses
+        from OpenAI/Together API completions.
+        
+        Args:
+            outputs: API response from the model
+            
+        Returns:
+            List of generated text strings
+        """
         res = []
         if not isinstance(outputs, list):
             outputs = [outputs]
+            
         for out in outputs:
+            # Check for error field in response
+            if "error" in out and out["error"]:
+                logging.error(f"API error: {out['error']}")
+                res.append("")
+                continue
+                
+            # Check if there are any choices
+            if "choices" not in out or not out["choices"]:
+                logging.error("No choices in API response")
+                res.append("")
+                continue
+            
+            # Create a placeholder array sized to match the number of choices
             tmp = [None] * len(out["choices"])
-            for choices in out["choices"]:
-                tmp[choices["index"]] = choices["text"]
-            res = res + tmp
+            
+            # Extract the content from each choice based on the response format
+            for choice in out["choices"]:
+                # Get the index to place this result
+                idx = choice.get("index", 0)
+                
+                # Extract the content based on whether this is a chat or completion API
+                if "message" in choice and isinstance(choice["message"], dict) and "content" in choice["message"]:
+                    # This is the chat completions API format (used by Together AI for DeepSeek-V3)
+                    tmp[idx] = choice["message"]["content"]
+                elif "text" in choice:
+                    # This is the completions API format
+                    tmp[idx] = choice["text"]
+                else:
+                    # Couldn't determine the format, log a warning and continue
+                    logging.warning(f"Could not extract content from choice: {choice}")
+                    tmp[idx] = ""
+            
+            # Add the results to the output list
+            res.extend([t if t is not None else "" for t in tmp])
+            
         return res
 
     @property
@@ -290,55 +361,14 @@ class LocalChatCompletion(LocalCompletionsAPI):
 
     @staticmethod
     def parse_generations(outputs: Union[Dict, List[Dict]], **kwargs) -> List[str]:
-        import logging
-        
         res = []
         if not isinstance(outputs, list):
             outputs = [outputs]
-            
-        # Add debug logging
-        logging.debug(f"Parsing generations from API response: {outputs}")
-        
         for out in outputs:
-            # Check for error field in response
-            if "error" in out and out["error"]:
-                logging.error(f"API error: {out['error']}")
-                res.append("")
-                continue
-                
-            # Check if there are any choices
-            if "choices" not in out or not out["choices"]:
-                logging.error("No choices in API response")
-                res.append("")
-                continue
-                
             tmp = [None] * len(out["choices"])
-            for choice in out["choices"]:
-                # Handle different API response formats
-                if "message" in choice and "content" in choice["message"]:
-                    # OpenAI/Together API format
-                    tmp[choice["index"]] = choice["message"]["content"]
-                elif "text" in choice:
-                    # Some APIs might return text directly
-                    tmp[choice["index"]] = choice["text"]
-                else:
-                    # Fallback - try to extract any text content
-                    logging.warning(f"Unexpected response format: {choice}")
-                    tmp[choice["index"]] = ""
-                    
-                    # Try to extract any text from the choice
-                    for key, value in choice.items():
-                        if isinstance(value, str) and len(value) > 0:
-                            tmp[choice["index"]] = value
-                            logging.info(f"Extracted text from unexpected field: {key}")
-                            break
-            
-            # Make sure we don't have any None values
-            tmp = [t if t is not None else "" for t in tmp]
+            for choices in out["choices"]:
+                tmp[choices["index"]] = choices["message"]["content"]
             res = res + tmp
-            
-        # Add debug logging for results
-        logging.debug(f"Parsed generations: {res}")
         return res
 
     def tok_encode(
@@ -399,88 +429,92 @@ class LocalChatCompletion(LocalCompletionsAPI):
         """
         Generate text greedily until a stopping sequence is reached.
         
+        This implementation handles requests from the evaluation framework,
+        ensuring proper extraction of the context (prompt) from the request objects.
+        
         Args:
-            requests: List of tuples (context, until)
-                context: String context for generation
-                until: List of string sequences to generate until
+            requests: List of Request objects from the lm-evaluation-harness
                 
         Returns:
             List of generated continuations
         """
         results = []
         import logging
+        import traceback
         
         # Enable debug mode
         DEBUG_NER = os.environ.get("DEBUG_NER", "0") == "1"
         
-        # Super verbose debug
         if DEBUG_NER:
-            print(f"PIXIU DEBUG: Total requests: {len(requests)}")
-            for i, req in enumerate(requests):
-                print(f"PIXIU DEBUG: Request {i} type: {type(req)}")
-                if hasattr(req, 'doc'):
-                    print(f"PIXIU DEBUG: Request {i} has doc attribute")
-                    if isinstance(req.doc, dict) and 'query' in req.doc:
-                        print(f"PIXIU DEBUG: Request {i} doc has query key")
+            logging.info(f"PIXIU DEBUG: Processing {len(requests)} requests")
         
         for request in requests:
-            # Extract context and until from the request
+            context = None
+            until = None
+            
+            # 1. Try to extract context and until from the request
+            # First, try to treat request as a tuple (context, until_args)
             try:
-                context, until = request
-            except (ValueError, TypeError):
-                # Handle the case where request is not a tuple-like object
-                context = getattr(request, 'context', '')
-                until = getattr(request, 'until', [])
+                context, until_args = request
+                if isinstance(until_args, dict):
+                    until = until_args.get("until", None)
+                else:
+                    until = until_args
+                if DEBUG_NER:
+                    logging.info(f"PIXIU DEBUG: Extracted context as tuple: {context[:50]}...")
+            except (ValueError, TypeError, AttributeError):
+                # Not a tuple, try other methods
+                if DEBUG_NER:
+                    logging.info(f"PIXIU DEBUG: Request type: {type(request)}")
+                    logging.info(f"PIXIU DEBUG: Request attributes: {dir(request)}")
+                
+                # 2. Try to access request.args (for RequestFactory objects)
+                if hasattr(request, 'args') and request.args:
+                    if DEBUG_NER:
+                        logging.info(f"PIXIU DEBUG: Request has args: {request.args}")
+                    context = request.args[0] if len(request.args) > 0 else None
+                    if len(request.args) > 1:
+                        if isinstance(request.args[1], dict):
+                            until = request.args[1].get("until", None)
+                        else:
+                            until = request.args[1]
+                
+                # 3. Try direct attribute access
+                elif hasattr(request, 'context'):
+                    context = request.context
+                    until = getattr(request, 'until', None)
+                    if DEBUG_NER:
+                        logging.info(f"PIXIU DEBUG: Used direct attribute access, context: {context[:50] if context else None}")
             
-            # Add explicit print statement to ensure visibility
-            if DEBUG_NER:
-                print(f"PIXIU DEBUG: Initial context: '{context[:50]}...' (len: {len(context) if context else 0})")
-                print(f"PIXIU DEBUG: Request type: {type(request)}")
-                print(f"PIXIU DEBUG: Has doc attr: {hasattr(request, 'doc')}")
-            
-            # For any task: Handle empty context by checking if there's a document with query
-            if not context and hasattr(request, 'doc'):
+            # 4. Special handling for tasks like NER: check for document with query
+            if hasattr(request, 'doc'):
                 doc = request.doc
                 if DEBUG_NER:
-                    print(f"PIXIU DEBUG: Doc type: {type(doc)}")
+                    logging.info(f"PIXIU DEBUG: Request has doc attribute: {type(doc)}")
                     if isinstance(doc, dict):
-                        print(f"PIXIU DEBUG: Doc keys: {doc.keys()}")
+                        logging.info(f"PIXIU DEBUG: Doc keys: {list(doc.keys())}")
                 
-                # Check for query in the document
+                # For NER, the query is in the doc
                 if isinstance(doc, dict) and 'query' in doc:
+                    # For all tasks with 'query' in doc, use it as context
                     context = doc['query']
                     if DEBUG_NER:
-                        print(f"PIXIU DEBUG: Extracted query from document! New context: '{context[:50]}...'")
-                    logging.info(f"Using document query from request.doc")
-                
-                # For NER specifically: If the document has text, try to construct a better context
-                if isinstance(doc, dict) and 'text' in doc and 'query' in doc:
-                    # Check if this is an NER task
-                    if 'identify the named entities' in doc['query'].lower():
-                        context = doc['query']
-                        if DEBUG_NER:
-                            print(f"PIXIU DEBUG: Detected NER task, using complete query from document")
+                        logging.info(f"PIXIU DEBUG: Using query from doc: {context[:100]}...")
             
-            # Additional check: if context is still empty, check if request has a query field directly
-            if not context and hasattr(request, 'query'):
-                context = request.query
-                if DEBUG_NER:
-                    print(f"PIXIU DEBUG: Extracted query directly from request.query! New context: '{context[:50]}...'")
-                logging.info(f"Using query directly from request")
-            
-            # Skip empty requests that can't be recovered
+            # Skip empty requests
             if not context:
-                if DEBUG_NER:
-                    print("PIXIU DEBUG: Empty context with no document query available")
                 logging.warning("Received empty request with no recoverable context, returning empty string")
                 results.append("")
                 continue
             
+            if DEBUG_NER:
+                logging.info(f"PIXIU DEBUG: Final context: {context[:100]}...")
+            
             # Convert the context to a message format for the API
             messages = [{"role": "user", "content": context}]
             
-            # Use a reasonable max_tokens value that works for all tasks
-            max_tokens = min(200, self._max_gen_toks) 
+            # Use a reasonable max_tokens value for generation tasks
+            max_tokens = min(1024, self._max_gen_toks)
             
             try:
                 # Create the payload
@@ -488,37 +522,49 @@ class LocalChatCompletion(LocalCompletionsAPI):
                     messages=messages,
                     generate=True,
                     gen_kwargs={"until": until, "max_tokens": max_tokens},
-                    temperature=0.0  # Use temperature 0 for greedy generation
+                    temperature=0.0
                 )
+                
+                if DEBUG_NER:
+                    import json
+                    logging.info(f"PIXIU DEBUG: API payload: {json.dumps(payload, indent=2)}")
                 
                 # Make the API request
                 response = self._make_request(payload)
                 
+                if DEBUG_NER:
+                    logging.info(f"PIXIU DEBUG: API response received")
+                
                 # Parse the generated text
                 generations = self.parse_generations(response)
                 
-                # Handle the case where generations might be empty
-                if not generations or not generations[0]:
-                    logging.warning("Received empty generation, returning empty string")
+                if DEBUG_NER:
+                    logging.info(f"PIXIU DEBUG: Parsed generations: {generations}")
+                
+                # Handle empty generations
+                if not generations or len(generations) == 0:
+                    logging.warning("Received empty generations from API")
                     results.append("")
-                else:
-                    # Add to cache if available
-                    result = generations[0]
-                    if self.cache_hook is not None:
-                        self.cache_hook.add_partial('greedy_until', (context, until), result)
-                    
-                    # Debug the generated text
-                    if DEBUG_NER:
-                        print(f"PIXIU DEBUG: Generated result: '{result[:50]}...'")
-                    
-                    results.append(result)
+                    continue
+                
+                # Get the first generation
+                generation = generations[0]
+                
+                # Process until sequences (stop sequences)
+                if until:
+                    for term in until:
+                        if term and term in generation:
+                            generation = generation.split(term)[0]
+                
+                # Add the result
+                results.append(generation)
                 
             except Exception as e:
                 logging.error(f"Error in greedy_until: {e}")
-                import traceback
-                logging.error(traceback.format_exc())
+                if DEBUG_NER:
+                    traceback.print_exc()
                 results.append("")
-            
+        
         return results
 
     def _make_request(self, payload):
@@ -537,12 +583,12 @@ class LocalChatCompletion(LocalCompletionsAPI):
         import traceback
         
         # Enable more detailed logging for debugging
-        DEBUG_API = os.environ.get("DEBUG_API", "0") == "1"
+        DEBUG_NER = os.environ.get("DEBUG_NER", "0") == "1"
         
         try:
-            if DEBUG_API:
+            if DEBUG_NER:
                 logging.info(f"Making API request to: {self._base_url}")
-                logging.info(f"Payload: {json.dumps(payload, indent=2)}")
+                logging.info(f"Request payload: {json.dumps(payload, indent=2)}")
             else:
                 logging.debug(f"Making API request to: {self._base_url}")
             
@@ -567,18 +613,21 @@ class LocalChatCompletion(LocalCompletionsAPI):
                 # Return a structured error format that can be handled by parse methods
                 return {
                     "error": error_message,
-                    "choices": [{"index": 0, "message": {"content": ""}}]
+                    "choices": []
                 }
             
             # Parse the response
             result = response.json()
             
-            if DEBUG_API:
-                logging.info(f"API response received: {json.dumps(result, indent=2)}")
+            if DEBUG_NER:
+                try:
+                    logging.info(f"API response received: {json.dumps(result, indent=2)}")
+                except:
+                    logging.info(f"API response received (not serializable to JSON)")
             else:
                 logging.debug("API response received successfully")
             
-            # Handle Together AI specific format adjustments if needed
+            # Handle Together AI specific format adjustments
             if "together.xyz" in self._base_url:
                 # Make sure the response has the expected format
                 if "choices" in result:
@@ -586,18 +635,31 @@ class LocalChatCompletion(LocalCompletionsAPI):
                     for i, choice in enumerate(result["choices"]):
                         if "index" not in choice:
                             choice["index"] = i
+                            
+                    # Print the content of the response if debugging NER
+                    if DEBUG_NER and result["choices"]:
+                        try:
+                            choice = result["choices"][0]
+                            if "message" in choice and "content" in choice["message"]:
+                                content = choice["message"]["content"]
+                                logging.info(f"First response content: {content}")
+                            elif "text" in choice:
+                                content = choice["text"]
+                                logging.info(f"First response content: {content}")
+                        except Exception as e:
+                            logging.error(f"Error extracting content from response: {e}")
             
             return result
             
         except Exception as e:
-            error_msg = f"Error making API request: {str(e)}"
-            logging.error(error_msg)
-            logging.error(traceback.format_exc())
+            logging.error(f"Error in API request: {e}")
+            if DEBUG_NER:
+                traceback.print_exc()
             
-            # Return an error response that can be handled by parse methods
+            # Return a structured error response
             return {
-                "error": error_msg,
-                "choices": [{"index": 0, "message": {"content": ""}}]
+                "error": str(e),
+                "choices": []
             }
 
 

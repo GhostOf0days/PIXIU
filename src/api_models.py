@@ -673,7 +673,7 @@ class LocalChatCompletion(LocalCompletionsAPI):
             messages = [{"role": "user", "content": context}]
             
             # Use a reasonable max_tokens value for generation tasks
-            max_tokens = min(1024, self._max_gen_toks)
+            max_tokens = min(1024, self.max_gen_toks)
             
             try:
                 # Create the payload
@@ -848,7 +848,7 @@ class OpenAIChatCompletion(LocalChatCompletion):
         if "max_tokens" in gen_kwargs:
             max_tokens = gen_kwargs.pop("max_tokens")
         else:
-            max_tokens = gen_kwargs.pop("max_gen_toks", self._max_gen_toks)
+            max_tokens = gen_kwargs.pop("max_gen_toks", self.max_gen_toks)
             
         temperature = gen_kwargs.pop("temperature", 0)
         stop = handle_stop_sequences(gen_kwargs.pop("until", ["<|endoftext|>"]), eos)

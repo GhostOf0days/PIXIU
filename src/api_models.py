@@ -4,9 +4,29 @@ from functools import cached_property
 from operator import itemgetter
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from lm_eval.api.registry import register_model
-from lm_eval.models.api_models import TemplateAPI
-from lm_eval.models.utils import handle_stop_sequences
+# Try to import the register_model decorator, but don't fail if it's not available
+try:
+    from lm_eval.api.registry import register_model
+except ImportError:
+    # Create a dummy decorator if register_model is not available
+    def register_model(name):
+        def decorator(cls):
+            return cls
+        return decorator
+
+try:
+    from lm_eval.models.api_models import TemplateAPI
+except ImportError:
+    # Create a dummy base class if TemplateAPI is not available
+    class TemplateAPI:
+        pass
+
+try:
+    from lm_eval.models.utils import handle_stop_sequences
+except ImportError:
+    # Create a dummy function if handle_stop_sequences is not available
+    def handle_stop_sequences(until, eos):
+        return until or eos
 
 
 eval_logger = logging.getLogger(__name__)
@@ -101,6 +121,14 @@ class LocalCompletionsAPI(TemplateAPI):
 
     @property
     def api_key(self):
+        # First check if we need a specific provider's key
+        if hasattr(self, 'base_url') and self.base_url:
+            if "together.xyz" in self.base_url:
+                key = os.environ.get("TOGETHER_API_KEY", None)
+                if key:
+                    return key
+            
+        # Fall back to default OpenAI key
         return os.environ.get("OPENAI_API_KEY", "")
 
 
@@ -246,10 +274,18 @@ class OpenAIChatCompletion(LocalChatCompletion):
     @cached_property
     def api_key(self):
         """Override this property to return the API key for the API request."""
+        # First check if we need a specific provider's key
+        if hasattr(self, 'base_url') and self.base_url:
+            if "together.xyz" in self.base_url:
+                key = os.environ.get("TOGETHER_API_KEY", None)
+                if key:
+                    return key
+                
+        # Fall back to default OpenAI key
         key = os.environ.get("OPENAI_API_KEY", None)
         if key is None:
             raise ValueError(
-                "API key not found. Please set the `OPENAI_API_KEY` environment variable."
+                "API key not found. Please set the appropriate API key environment variable (OPENAI_API_KEY or TOGETHER_API_KEY)."
             )
         return key
 

@@ -401,6 +401,27 @@ PIXIU now supports evaluating models through the OpenAI ChatCompletions API (e.g
    - Local APIs that follow the OpenAI ChatCompletions format
    - Proxy services for other models that conform to the OpenAI API spec
 
+5. For Together AI specifically:
+
+   ```bash
+   # Set your Together API key
+   export TOGETHER_API_KEY=your_together_api_key_here
+
+   # Run evaluation with Together AI models
+   python src/eval.py \
+     --model local-chat-completions \
+     --model_args model=meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo,base_url=https://api.together.xyz/v1/chat/completions \
+     --tasks finqa \
+     --apply_chat_template
+   ```
+
+   **Troubleshooting Together AI Integration:**
+
+   - If you encounter a `KeyError: 'local-chat-completions'` error, ensure you're using the latest version of the codebase with API model support.
+   - If authentication fails, check that your `TOGETHER_API_KEY` is correctly set.
+   - For specific model errors, consult the [Together AI model list](https://docs.together.ai/docs/inference-models) for currently available models.
+   - When using Together AI models, you can specify additional parameters like `temperature`, `max_tokens`, etc. in the `--model_args` string.
+
 Note that multiple-choice tasks may not work with chat models since they don't provide the logprobs needed for these evaluations.
 
 #### Automated Task Assessment

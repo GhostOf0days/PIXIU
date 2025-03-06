@@ -1,11 +1,26 @@
-import argparse
-import json
-import logging
-import os
-import tasks
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
-from lm_eval import utils
+import logging
+import argparse
+import os
+import sys
+import json
+
+# Ensure custom API models are loaded
+try:
+    from api_models import LocalCompletionsAPI, LocalChatCompletion, OpenAICompletionsAPI, OpenAIChatCompletion
+except ImportError:
+    try:
+        sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+        from api_models import LocalCompletionsAPI, LocalChatCompletion, OpenAICompletionsAPI, OpenAIChatCompletion
+    except ImportError:
+        print("Warning: Could not import custom API models directly")
+
+# Import other modules
 import evaluator
+from lm_eval import utils
+import tasks
 from model_prompt import MODEL_PROMPT_MAP
 
 logging.getLogger("openai").setLevel(logging.WARNING)

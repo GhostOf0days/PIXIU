@@ -310,31 +310,19 @@ class LocalCompletionsAPI(TemplateAPI):
         return os.environ.get("OPENAI_API_KEY", "")
 
     def _make_request(self, payload):
-        """
-        Make an API request with the given payload.
-        
-        Args:
-            payload: Dict containing the request payload
-            
-        Returns:
-            Dict containing the API response
-        """
-        DEBUG_NER = os.environ.get("DEBUG_NER", "0") == "1"
-        
         try:
-            # Get base URL
+            # Get base URL and API key
             base_url = self.base_url
-            if not base_url:
-                raise ValueError("No base URL found in model configuration")
-                
-            if DEBUG_NER:
-                logging.info(f"Making API request to: {base_url}")
-                logging.info(f"Request payload: {json.dumps(payload, indent=2)}")
+            api_key = self.api_key
+            
+            # Debug output
+            print(f"DEBUG: Using API key: {api_key[:5]}...{api_key[-5:]}")
+            print(f"DEBUG: Making request to: {base_url}")
             
             # Add API key to headers
             headers = {
                 "Content-Type": "application/json", 
-                "Authorization": f"Bearer {self.api_key}"
+                "Authorization": f"Bearer {api_key}"
             }
             
             # Make the request to the API

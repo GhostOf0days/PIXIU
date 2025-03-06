@@ -537,25 +537,24 @@ class LocalChatCompletion(LocalCompletionsAPI):
     @property
     def api_key(self):
         """Get the API key for the API request."""
-        # First check if API key was provided directly in the constructor
         if hasattr(self, 'provided_api_key') and self.provided_api_key:
+            print(f"DEBUG: Using provided_api_key: {self.provided_api_key[:5]}...{self.provided_api_key[-5:]}")
             return self.provided_api_key
             
-        # Otherwise check environment variables
-        # First check if we need a specific provider's key
-        if self.base_url and "together.xyz" in self.base_url:
-            # Check for Together API key first
-            together_key = os.environ.get("TOGETHER_API_KEY")
-            if together_key:
-                return together_key
-                
-        # Fall back to OpenAI key
+        # Check Together API key from environment
+        together_key = os.environ.get("TOGETHER_API_KEY")
+        if together_key:
+            print(f"DEBUG: Using TOGETHER_API_KEY from env: {together_key[:5]}...{together_key[-5:]}")
+            return together_key
+            
+        # Try OpenAI key as fallback
         openai_key = os.environ.get("OPENAI_API_KEY")
         if openai_key:
+            print(f"DEBUG: Using OPENAI_API_KEY: {openai_key[:5]}...{openai_key[-5:]}")
             return openai_key
             
         raise ValueError(
-            "Please set the OPENAI_API_KEY or TOGETHER_API_KEY environment variable or provide an api_key parameter"
+            "Please set the TOGETHER_API_KEY environment variable or provide an api_key parameter"
         )
 
     def greedy_until(self, requests):

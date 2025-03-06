@@ -289,9 +289,14 @@ class LocalCompletionsAPI(TemplateAPI):
             base_url = self.base_url
             api_key = self.api_key
             
+            # Enable debug mode
+            DEBUG_NER = os.environ.get("DEBUG_NER", "0") == "1"
+            
             # Debug output
-            print(f"DEBUG: Using API key: {api_key[:5]}...{api_key[-5:]}")
-            print(f"DEBUG: Making request to: {base_url}")
+            if DEBUG_NER:
+                print(f"DEBUG: Using API key: {api_key[:5]}...{api_key[-5:]}")
+                print(f"DEBUG: Making request to: {base_url}")
+                print(f"DEBUG: API request payload: {json.dumps(payload, indent=2)}")
             
             # Add API key to headers
             headers = {
@@ -318,8 +323,16 @@ class LocalCompletionsAPI(TemplateAPI):
                 }
             
             # Parse the response
-            result = response.json()
-            
+            try:
+                result = response.json()
+            except json.JSONDecodeError as e:
+                error_message = f"JSON decode error: {e}\nResponse text: {response.text}"
+                logging.error(error_message)
+                return {
+                    "error": error_message,
+                    "choices": []
+                }
+                
             if DEBUG_NER:
                 try:
                     logging.info(f"API response received: {json.dumps(result, indent=2)}")
@@ -349,7 +362,7 @@ class LocalCompletionsAPI(TemplateAPI):
                             logging.error(f"Error extracting content from response: {e}")
             
             return result
-            
+                
         except Exception as e:
             logging.error(f"Error in API request: {e}")
             if DEBUG_NER:
@@ -360,7 +373,6 @@ class LocalCompletionsAPI(TemplateAPI):
                 "error": str(e),
                 "choices": []
             }
-
 
 @register_model("local-chat-completions")
 class LocalChatCompletion(LocalCompletionsAPI):

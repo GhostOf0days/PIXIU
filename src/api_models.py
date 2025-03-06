@@ -558,144 +558,75 @@ class LocalChatCompletion(LocalCompletionsAPI):
         )
 
     def greedy_until(self, requests):
-        """
-        Generate text greedily until a stopping sequence is reached.
-        
-        Args:
-            requests: List of Request objects from the lm-evaluation-harness
-                
-        Returns:
-            List of generated continuations
-        """
         results = []
+        print(f"DEBUG: Processing {len(requests)} requests in greedy_until")
         
-        # Enable debug mode
-        DEBUG_NER = os.environ.get("DEBUG_NER", "0") == "1"
-        
-        if DEBUG_NER:
-            logging.info(f"Processing {len(requests)} requests")
-        
-        for request in requests:
-            context = None
-            until = None
-            
-            # 1. Try to extract context and until from the request
+        for idx, request in enumerate(requests):
             try:
-                # Try to unpack as a tuple (context, until_args)
-                context, until_args = request
-                if isinstance(until_args, dict):
-                    until = until_args.get("until", None)
+                # Extract context and until from request
+                print(f"\nDEBUG: Processing request #{idx}")
+                
+                # Extract context
+                context = None
+                if hasattr(request, 'doc') and request.doc and isinstance(request.doc, dict) and 'query' in request.doc:
+                    context = request.doc['query']
+                    print(f"DEBUG: Extracted context from doc.query: {context[:100]}...")
+                elif hasattr(request, 'args') and request.args:
+                    context = request.args[0]
+                    print(f"DEBUG: Extracted context from args[0]: {context[:100]}...")
+                elif isinstance(request, tuple) and len(request) >= 1:
+                    context = request[0]
+                    print(f"DEBUG: Extracted context from tuple[0]: {context[:100]}...")
                 else:
-                    until = until_args
-                if DEBUG_NER:
-                    logging.info(f"Extracted context as tuple: {context[:50] if context else None}...")
-            except (ValueError, TypeError, AttributeError):
-                # Not a tuple, try other methods
-                if DEBUG_NER:
-                    logging.info(f"Request type: {type(request)}")
+                    print(f"DEBUG: Could not extract context from request of type {type(request)}")
+                    print(f"DEBUG: Request attributes: {dir(request)}")
                     if hasattr(request, '__dict__'):
-                        logging.info(f"Request attributes: {request.__dict__}")
-                    else:
-                        logging.info(f"Request does not have __dict__")
+                        print(f"DEBUG: Request __dict__: {request.__dict__}")
+                    results.append("")
+                    continue
                 
-                # 2. Try to access request.args (for RequestFactory objects)
-                if hasattr(request, 'args') and request.args:
-                    if DEBUG_NER:
-                        logging.info(f"Request has args: {request.args}")
-                    context = request.args[0] if len(request.args) > 0 else None
-                    if len(request.args) > 1:
-                        if isinstance(request.args[1], dict):
-                            until = request.args[1].get("until", None)
-                        else:
-                            until = request.args[1]
+                # Convert to message format and create payload
+                messages = [{"role": "user", "content": context}]
                 
-                # 3. Try direct attribute access
-                elif hasattr(request, 'context'):
-                    context = request.context
-                    until = getattr(request, 'until', None)
-                    if DEBUG_NER:
-                        logging.info(f"Used direct attribute access, context: {context[:50] if context else None}")
-            
-            # 4. Special handling for tasks like NER: check for document with query
-            if hasattr(request, 'doc'):
-                doc = request.doc
-                if DEBUG_NER:
-                    logging.info(f"Request has doc attribute: {type(doc)}")
-                    if isinstance(doc, dict):
-                        logging.info(f"Doc keys: {list(doc.keys())}")
-                
-                # For NER, the query is in the doc
-                if isinstance(doc, dict) and 'query' in doc:
-                    # For all tasks with 'query' in doc, use it as context
-                    context = doc['query']
-                    if DEBUG_NER:
-                        logging.info(f"Using query from doc: {context[:100] if context else None}...")
-            
-            # Skip empty requests
-            if not context:
-                logging.warning("Received empty request with no recoverable context, returning empty string")
-                results.append("")
-                continue
-            
-            if DEBUG_NER:
-                logging.info(f"Final context: {context[:100] if context else None}...")
-            
-            # Convert the context to a message format for the API
-            messages = [{"role": "user", "content": context}]
-            
-            # Use a reasonable max_tokens value for generation tasks
-            max_tokens = min(1024, self._max_gen_toks)
-            
-            try:
-                # Create the payload
+                # Create payload and make request with VERY detailed logging
+                print(f"DEBUG: Creating API payload for request #{idx}")
                 payload = self._create_payload(
                     messages=messages,
                     generate=True,
-                    gen_kwargs={"until": until, "max_tokens": max_tokens},
+                    gen_kwargs={"max_tokens": 256},
                     temperature=0.0
                 )
                 
-                if DEBUG_NER:
-                    logging.info(f"API payload: {json.dumps(payload, indent=2)}")
+                print(f"DEBUG: Making API request #{idx}")
+                print(f"DEBUG: Payload: {json.dumps(payload, indent=2)}")
                 
                 # Make the API request
                 response = self._make_request(payload)
                 
-                if DEBUG_NER:
-                    logging.info(f"API response received")
+                # Print the raw response
+                print(f"DEBUG: Raw API response for request #{idx}: {json.dumps(response, indent=2)[:500]}...")
                 
                 # Parse the generated text
+                print(f"DEBUG: Parsing generations for request #{idx}")
                 generations = self.parse_generations(response)
                 
-                if DEBUG_NER:
-                    logging.info(f"Parsed generations: {generations}")
+                # Print the parsed generations
+                print(f"DEBUG: Parsed generations: {generations}")
                 
-                # Handle empty generations
-                if not generations or len(generations) == 0:
-                    logging.warning("Received empty generations from API")
-                    results.append("")
-                    continue
+                # Get the first generation or empty string
+                generation = generations[0] if generations and len(generations) > 0 else ""
+                print(f"DEBUG: Final generation: {generation}")
                 
-                # Get the first generation
-                generation = generations[0]
-                
-                # Process until sequences (stop sequences)
-                if until:
-                    for term in until:
-                        if term and term in generation:
-                            generation = generation.split(term)[0]
-                
-                # Add the result
+                # Add to results
                 results.append(generation)
                 
             except Exception as e:
-                logging.error(f"Error in greedy_until: {e}")
-                if DEBUG_NER:
-                    traceback.print_exc()
+                print(f"DEBUG: Error processing request #{idx}: {e}")
+                traceback.print_exc()
                 results.append("")
         
+        print(f"DEBUG: Returning {len(results)} results from greedy_until")
         return results
-
 
 @register_model("openai-completions")
 class OpenAICompletionsAPI(LocalCompletionsAPI):

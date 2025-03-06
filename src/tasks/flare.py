@@ -1359,10 +1359,36 @@ class ZH22CCKS(ZH19CCKS):
 class ZHNER(NER):
     DATASET_PATH = "TheFinAI/flare-zh-ner"
 
-    def process_results(self, doc, results):
-        text = ' '.join(doc["text"])
-        pred = process_zhtext(results[0], text)
+    # def process_results(self, doc, results):
+    #     text = ' '.join(doc["text"])
+    #     pred = process_zhtext(results[0], text)
 
+    #     return {"entity_f1": (pred, doc["label"], results[0])}
+    
+    def process_results(self, doc, results):
+        print(f"\nDEBUG NER: Processing results")
+        print(f"DEBUG NER: Document: {doc}")
+        print(f"DEBUG NER: Results: {results}")
+        
+        text = doc["text"]
+        print(f"DEBUG NER: Text: {text}")
+        
+        # Check if results is empty or None
+        if not results or len(results) == 0:
+            print("DEBUG NER: Empty results, returning empty prediction")
+            return {"entity_f1": ([], doc["label"], [])}
+        
+        result = results[0]
+        print(f"DEBUG NER: Result[0]: {result}")
+        
+        # Call process_text to extract entities
+        print(f"DEBUG NER: Calling process_text")
+        pred = process_text(result, text)
+        print(f"DEBUG NER: Extracted prediction: {pred}")
+        
+        # Compare with expected labels
+        print(f"DEBUG NER: Expected labels: {doc['label']}")
+        
         return {"entity_f1": (pred, doc["label"], results[0])}
 
 

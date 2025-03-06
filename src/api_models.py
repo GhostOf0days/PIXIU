@@ -30,7 +30,23 @@ try:
 except ImportError:
     # Create a dummy base class if TemplateAPI is not available
     class TemplateAPI:
-        pass
+        def __init__(self, **kwargs):
+            # Initialize common attributes
+            self.base_url = kwargs.get('base_url')
+            self.model = kwargs.get('model')
+            self.tokenizer_backend = kwargs.get('tokenizer_backend')
+            self._batch_size = kwargs.get('batch_size', 1)
+            
+            # Handle max_tokens as an alias for max_gen_toks
+            if 'max_tokens' in kwargs:
+                self._max_gen_toks = kwargs.get('max_tokens')
+            else:
+                self._max_gen_toks = kwargs.get('max_gen_toks', 32)
+            
+            # Store any additional attributes
+            for key, value in kwargs.items():
+                if not hasattr(self, key) and key not in ['max_tokens']:  # Skip max_tokens as we already handled it
+                    setattr(self, key, value)
 
 try:
     from lm_eval.models.utils import handle_stop_sequences
@@ -188,8 +204,12 @@ class LocalChatCompletion(LocalCompletionsAPI):
         """
         additional_config = {} if additional_config is None else additional_config
         args = utils.simple_parse_args_string(arg_string)
+        
+        # Extract api_key if present to ensure it's correctly passed
+        api_key = args.pop('api_key', None)
+        
         args2 = {k: v for k, v in additional_config.items() if v is not None}
-        return cls(**args, **args2)
+        return cls(api_key=api_key, **args, **args2)
 
     def _create_payload(
         self,
@@ -372,8 +392,12 @@ class OpenAIChatCompletion(LocalChatCompletion):
         """
         additional_config = {} if additional_config is None else additional_config
         args = utils.simple_parse_args_string(arg_string)
+        
+        # Extract api_key if present to ensure it's correctly passed
+        api_key = args.pop('api_key', None)
+        
         args2 = {k: v for k, v in additional_config.items() if v is not None}
-        return cls(**args, **args2)
+        return cls(api_key=api_key, **args, **args2)
 
     def loglikelihood(self, requests, **kwargs):
         raise NotImplementedError(

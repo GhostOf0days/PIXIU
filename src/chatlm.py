@@ -290,6 +290,10 @@ class OpenAIChatCompletionLM(BaseLM):
             return []
         
         res = []
+        disable_tqdm = True  # Default to disable progress bar
+        
+        # Enable debug mode
+        DEBUG_NER = os.environ.get("DEBUG_NER", "0") == "1"
         
         # Sort requests by length for better batching
         def _collate(x):
@@ -297,6 +301,31 @@ class OpenAIChatCompletionLM(BaseLM):
             return len(toks), x[0]
         
         re_ord = utils.Reorderer(requests, _collate)
+        
+        # Add a method to get the original request object from the reordered tuple
+        # since standard Reorderer doesn't provide this
+        def get_original_request(reordered_item):
+            # The reordered_item is a tuple (prompt, until)
+            reord_prompt, _ = reordered_item
+            
+            # Look for the original request in the requests list
+            for original_request in requests:
+                # In NER task, the original request is an object that can be unpacked to (prompt, until)
+                # but also has additional attributes like 'doc'
+                if hasattr(original_request, '__iter__'):
+                    # Unpack the original request
+                    orig_prompt, _ = original_request
+                    
+                    # Compare the prompts
+                    if orig_prompt == reord_prompt:
+                        # Return the whole request object, not just the unpacked tuple
+                        return original_request
+        
+            # If not found (which shouldn't happen), return None
+            return None
+        
+        # Attach the method to the Reorderer instance
+        re_ord.get_original_request = get_original_request
         
         def format_message(text):
             """Format prompt text into a ChatGPT message"""
@@ -319,6 +348,37 @@ class OpenAIChatCompletionLM(BaseLM):
             
             return list(stop_sequences)
         
+        # Pre-process requests to handle empty contexts with documents (NER task fix)
+        processed_requests = []
+        for request in re_ord.get_reordered():
+            prompt, stop_sequences = request
+            original_request = re_ord.get_original_request(request)
+            
+            # Debug logging
+            if DEBUG_NER:
+                print(f"CHATLM DEBUG: Processing request with prompt length: {len(prompt)}")
+                print(f"CHATLM DEBUG: Has doc attribute: {hasattr(original_request, 'doc')}")
+            
+            # Handle empty prompts by extracting from document
+            if not prompt and hasattr(original_request, 'doc'):
+                doc = original_request.doc
+                if isinstance(doc, dict) and 'query' in doc:
+                    prompt = doc['query']
+                    if DEBUG_NER:
+                        print(f"CHATLM DEBUG: Extracted query from document: '{prompt[:50]}...'")
+            
+            # Skip requests with empty prompts
+            if not prompt:
+                if DEBUG_NER:
+                    print("CHATLM DEBUG: Empty prompt with no extractable query")
+                processed_requests.append((prompt, stop_sequences))
+                continue
+            
+            processed_requests.append((prompt, stop_sequences))
+        
+        # Replace the original reordered requests with the processed ones
+        re_ord._reordered = processed_requests
+        
         # Process requests in batches (though batch size will be 1 for chat completions)
         for request_batch in tqdm(
             [re_ord.get_reordered()[i:i+self.REQ_CHUNK_SIZE] 
@@ -329,6 +389,11 @@ class OpenAIChatCompletionLM(BaseLM):
             
             for request in request_batch:
                 prompt, stop_sequences = request
+                
+                # Skip empty prompts
+                if not prompt:
+                    batch_responses.append("")
+                    continue
                 
                 # Format the prompt as a message
                 messages = format_message(prompt)

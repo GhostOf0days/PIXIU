@@ -7,52 +7,48 @@ import traceback
 import requests
 import json
 import sys
+import re
 
 # Add financial-evaluation to Python path
 src_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(src_dir)
-financial_eval_path = os.path.join(parent_dir, "financial-evaluation")
+financial_eval_path = os.path.join(src_dir, "financial-evaluation")
 if os.path.exists(financial_eval_path) and financial_eval_path not in sys.path:
     sys.path.insert(0, financial_eval_path)
+    print(f"Added {financial_eval_path} to sys.path")
 
-# Try importing from lm_eval with explicit error handling
+# Create our own register_model decorator to avoid circular imports
+MODEL_REGISTRY = {}
+
+def register_model(name):
+    """Register a model with the given name."""
+    def decorator(cls):
+        MODEL_REGISTRY[name] = cls
+        return cls
+    return decorator
+
+# Try to import utils from lm_eval if available
 try:
-    from lm_eval.api.registry import register_model
     from lm_eval import utils
-    from lm_eval.models.api_models import TemplateAPI
-    from lm_eval.models.utils import handle_stop_sequences
 except ImportError as e:
     print(f"Import error: {e}")
     print(f"Current sys.path: {sys.path}")
     
-    # Create fallback implementations
-    def register_model(name):
-        def decorator(cls):
-            print(f"Registering model {name} using fallback implementation")
-            return cls
-        return decorator
-    
-    # Import local utils or create simple version
-    try:
-        # Try to import utils from the current directory
-        from utils import simple_parse_args_string
-        
-        class utils:
-            @staticmethod
-            def simple_parse_args_string(arg_string):
-                return simple_parse_args_string(arg_string)
-    except ImportError:
-        # Fallback to a simple implementation
-        class utils:
-            @staticmethod
-            def simple_parse_args_string(arg_string):
-                """Parse a comma-separated string of key=value pairs into a dictionary."""
-                if arg_string == "":
-                    return {}
-                return {k.strip(): v.strip() for k, v in 
-                       [item.split("=", 1) for item in arg_string.split(",")]}
-    
-    # Create a simple TemplateAPI class
+    # Create a fallback implementation for utils
+    class utils:
+        @staticmethod
+        def simple_parse_args_string(arg_string):
+            """Parse a comma-separated string of key=value pairs into a dictionary."""
+            if arg_string == "":
+                return {}
+            return {k.strip(): v.strip() for k, v in 
+                  [item.split("=", 1) for item in arg_string.split(",")]}
+
+# Try to import TemplateAPI and handle_stop_sequences
+try:
+    from lm_eval.models.api_models import TemplateAPI
+    from lm_eval.models.utils import handle_stop_sequences
+except ImportError:
+    # Define these locally if imports fail
     class TemplateAPI:
         def __init__(self, **kwargs):
             # Initialize cache_hook attribute
@@ -76,42 +72,20 @@ except ImportError as e:
                     batch_size = 1
             self._batch_size = batch_size
             
-            # Handle max_tokens/max_gen_toks
-            max_gen_toks = 32
-            if 'max_tokens' in kwargs:
-                max_tokens = kwargs.get('max_tokens')
-                if isinstance(max_tokens, str):
-                    try:
-                        max_tokens = int(max_tokens)
-                    except ValueError:
-                        max_tokens = 32
-                max_gen_toks = max_tokens
-            elif 'max_gen_toks' in kwargs:
-                max_gen_toks_val = kwargs.get('max_gen_toks')
-                if isinstance(max_gen_toks_val, str):
-                    try:
-                        max_gen_toks = int(max_gen_toks_val)
-                    except ValueError:
-                        max_gen_toks = 32
-            
-            self._max_gen_toks = max_gen_toks
-            
             # Store additional attributes
             for key, value in kwargs.items():
-                if not hasattr(self, key) and key not in ['max_tokens', 'batch_size', 'max_gen_toks']:
+                if not hasattr(self, key):
                     setattr(self, key, value)
-
+    
         def set_cache_hook(self, cache_hook):
             """Set the cache hook for caching API results."""
             self.cache_hook = cache_hook
     
-    # Simple implementation of handle_stop_sequences
     def handle_stop_sequences(until, eos):
         """Handle stop sequences for generation."""
         if until is None:
             return eos
         return until
-
 
 # Configure logging
 eval_logger = logging.getLogger(__name__)
@@ -390,6 +364,8 @@ class LocalCompletionsAPI(TemplateAPI):
 
 @register_model("local-chat-completions")
 class LocalChatCompletion(LocalCompletionsAPI):
+    """Chat completions API for local endpoints."""
+    
     def __init__(
         self,
         base_url=None,
@@ -399,30 +375,21 @@ class LocalChatCompletion(LocalCompletionsAPI):
         **kwargs,
     ):
         # Store API key if provided
-        self.provided_api_key = api_key
+        self._api_key = api_key
         
-        # Store base_url directly to ensure it's accessible
-        self._base_url = base_url
-        
-        # Warning about chat template flag
-        eval_logger.warning(
-            "chat-completions endpoint requires the `--apply_chat_template` flag."
-        )
-        
+        # Call parent's __init__
         super().__init__(
             base_url=base_url,
             tokenizer_backend=tokenizer_backend,
             **kwargs,
         )
+        
+        # Store whether to use tokenized requests
         self.tokenized_requests = tokenized_requests
-        self.apply_chat_template = kwargs.get('apply_chat_template', True)
         
-        if self._batch_size > 1:
-            eval_logger.warning(
-                "Chat completions does not support batching. Defaulting to batch size 1."
-            )
-            self._batch_size = 1
-        
+        # Debug mode
+        self.debug = kwargs.get('debug', False)
+    
     @classmethod
     def create_from_arg_string(cls, arg_string, additional_config=None):
         """
@@ -516,30 +483,80 @@ class LocalChatCompletion(LocalCompletionsAPI):
         """Pass through the string as is for chat completions."""
         return string
 
-    def loglikelihood(self, requests, **kwargs):
-        """
-        Return a default loglikelihood response to prevent errors with CachingLM.
+    def process_text(self, text, labels=None):
+        """Process text for entity extraction - debug implementation"""
+        if self.debug:
+            print(f"DEBUG process_text: Text: {text}")
         
-        Args:
-            requests: The requests for which to calculate loglikelihoods
+        # Extract entities from the model's response
+        # Format expected: "entity_name, entity_type"
+        entity_list = []
+        if labels is None:
+            # Parse from answer if no labels provided
+            answer = getattr(self, "_last_answer", "")
+            if answer:
+                # Extract entity names and types from response
+                lines = [line.strip() for line in answer.split('\n') if line.strip()]
+                for line in lines:
+                    parts = line.split(',', 1)
+                    if len(parts) == 2:
+                        entity_name = parts[0].strip()
+                        entity_type = parts[1].strip()
+                        entity_list.append((entity_name, entity_type))
+                        
+                if self.debug:
+                    print(f"DEBUG process_text: Parsed entity list: {entity_list}")
+        
+        # Generate BIO tags
+        bio_labels = ['O'] * len(text.split())
+        if entity_list:
+            # Process each detected entity
+            for entity_name, entity_type in entity_list:
+                # Find all occurrences of the entity in the text
+                entity_positions = [(m.start(), m.end()) for m in re.finditer(re.escape(entity_name), text)]
+                
+                for start_pos, end_pos in entity_positions:
+                    # Find word indices corresponding to this entity
+                    words = text[:start_pos].split()
+                    start_idx = len(words)
+                    
+                    entity_words = entity_name.split()
+                    for i, _ in enumerate(entity_words):
+                        if start_idx + i < len(bio_labels):
+                            if i == 0:
+                                bio_labels[start_idx + i] = f"B-{entity_type}"
+                            else:
+                                bio_labels[start_idx + i] = f"I-{entity_type}"
+        
+        # For debugging
+        if self.debug:
+            word_indices = [i for i, word in enumerate(text.split())]
+            print(f"DEBUG process_text: Word indices: {word_indices}")
+            print(f"DEBUG process_text: Final labels: {bio_labels}")
             
-        Returns:
-            A list of tuples containing (logprob, is_greedy) values
-        """
-        eval_logger.warning(
-            "Loglikelihood calculation is not fully supported for chat completions. "
-            "Returning default values (-1.0, False) for each request."
-        )
+        return bio_labels
+    
+    # Override the loglikelihood method to capture answers for entity extraction
+    def loglikelihood(self, requests, **kwargs):
+        """Get loglikelihoods for the given requests and store the last answer."""
+        if isinstance(requests, list) and len(requests) > 0:
+            # Store the answer for later processing
+            request_parts = requests[0].split('Answer:', 1)
+            if len(request_parts) > 1:
+                self._last_answer = request_parts[1].strip()
+                if self.debug:
+                    print(f"DEBUG Captured answer: {self._last_answer}")
+                    print(f"DEBUG requests: {requests}")
         
-        # Return a default response for each request
-        return [(-1.0, False) for _ in requests]
+        # Call the parent method
+        return super().loglikelihood(requests, **kwargs)
 
     @property
     def api_key(self):
         """Get the API key for the API request."""
-        if hasattr(self, 'provided_api_key') and self.provided_api_key:
-            print(f"DEBUG: Using provided_api_key: {self.provided_api_key[:5]}...{self.provided_api_key[-5:]}")
-            return self.provided_api_key
+        if hasattr(self, '_api_key') and self._api_key:
+            print(f"DEBUG: Using provided_api_key: {self._api_key[:5]}...{self._api_key[-5:]}")
+            return self._api_key
             
         # Check Together API key from environment
         together_key = os.environ.get("TOGETHER_API_KEY")
@@ -855,3 +872,26 @@ class OpenAIChatCompletion(LocalChatCompletion):
                 del payload["temperature"]
                 
         return payload
+
+# Define function to register with the actual lm_eval registry
+def register_with_lm_eval():
+    """Register our models with the lm_eval registry if available."""
+    try:
+        # Import the real registry without creating circular dependency
+        import importlib
+        lm_eval_models = importlib.import_module("lm_eval.models")
+        
+        # Register our models
+        for name, cls in MODEL_REGISTRY.items():
+            if hasattr(lm_eval_models, "MODEL_REGISTRY"):
+                lm_eval_models.MODEL_REGISTRY[name] = cls
+                print(f"Successfully registered {name} with lm_eval")
+        
+        return True
+    except (ImportError, AttributeError) as e:
+        print(f"Could not register models with lm_eval: {e}")
+        return False
+
+# Call this at the end of the file after all models are defined
+if __name__ != "__main__":  # Only register when imported, not when run directly
+    register_with_lm_eval()

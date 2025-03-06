@@ -103,10 +103,15 @@ def main():
         with open(args.output_path, "w") as f:
             f.write(dumped)
 
-    batch_sizes = ",".join(map(str, results["config"]["batch_sizes"]))
+    # Check if batch_sizes exists in the config, if not use an empty list
+    batch_sizes = []
+    if "batch_sizes" in results["config"]:
+        batch_sizes = results["config"]["batch_sizes"]
+    
+    batch_sizes_str = ",".join(map(str, batch_sizes))
     print(
         f"{args.model} ({args.model_args}), limit: {args.limit}, provide_description: {args.provide_description}, "
-        f"num_fewshot: {args.num_fewshot}, batch_size: {args.batch_size}{f' ({batch_sizes})' if batch_sizes else ''}"
+        f"num_fewshot: {args.num_fewshot}, batch_size: {args.batch_size}{f' ({batch_sizes_str})' if batch_sizes_str else ''}"
     )
     print(evaluator.make_table(results))
 

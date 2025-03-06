@@ -369,18 +369,50 @@ class LocalChatCompletion(LocalCompletionsAPI):
         results = []
         import logging
         
+        # Enable debug mode
+        DEBUG_NER = os.environ.get("DEBUG_NER", "0") == "1"
+        
+        # Super verbose debug
+        if DEBUG_NER:
+            print(f"PIXIU DEBUG: Total requests: {len(requests)}")
+            for i, req in enumerate(requests):
+                print(f"PIXIU DEBUG: Request {i} type: {type(req)}")
+                if hasattr(req, 'doc'):
+                    print(f"PIXIU DEBUG: Request {i} has doc attribute")
+                    if isinstance(req.doc, dict) and 'query' in req.doc:
+                        print(f"PIXIU DEBUG: Request {i} doc has query key")
+        
         for request in requests:
             context, until = request
+            
+            # Add explicit print statement to ensure visibility
+            if DEBUG_NER:
+                print(f"PIXIU DEBUG: Initial context: '{context[:20]}...' (len: {len(context) if context else 0})")
+                print(f"PIXIU DEBUG: Request type: {type(request)}")
+                print(f"PIXIU DEBUG: Has doc attr: {hasattr(request, 'doc')}")
             
             # For any task: Handle empty context by checking if there's a document with query
             if not context and hasattr(request, 'doc'):
                 doc = request.doc
+                if DEBUG_NER:
+                    print(f"PIXIU DEBUG: Doc type: {type(doc)}")
                 if isinstance(doc, dict) and 'query' in doc:
                     context = doc['query']
+                    if DEBUG_NER:
+                        print(f"PIXIU DEBUG: Extracted query from document! New context length: {len(context)}")
                     logging.info(f"Using document query from request.doc")
+            
+            # Additional check: if context is still empty, check if request has a query field directly
+            if not context and hasattr(request, 'query'):
+                context = request.query
+                if DEBUG_NER:
+                    print(f"PIXIU DEBUG: Extracted query directly from request.query! New context length: {len(context)}")
+                logging.info(f"Using query directly from request")
             
             # Skip empty requests that can't be recovered
             if not context:
+                if DEBUG_NER:
+                    print("PIXIU DEBUG: Empty context with no document query available")
                 logging.warning("Received empty request with no recoverable context, returning empty string")
                 results.append("")
                 continue
@@ -416,13 +448,13 @@ class LocalChatCompletion(LocalCompletionsAPI):
                     if self.cache_hook is not None:
                         self.cache_hook.add_partial('greedy_until', (context, until), result)
                     results.append(result)
-                    
+                
             except Exception as e:
                 logging.error(f"Error in greedy_until: {e}")
                 import traceback
                 logging.error(traceback.format_exc())
                 results.append("")
-                
+            
         return results
 
     def _make_request(self, payload):

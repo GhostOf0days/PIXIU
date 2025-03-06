@@ -3,6 +3,7 @@ import os
 from functools import cached_property
 from operator import itemgetter
 from typing import Any, Dict, List, Optional, Tuple, Union
+import traceback
 
 # Try to import the register_model decorator, but don't fail if it's not available
 try:
@@ -366,122 +367,120 @@ class LocalChatCompletion(LocalCompletionsAPI):
             List of generated continuations
         """
         results = []
+        import logging
         
         for request in requests:
             context, until = request
             
-            # For classification tasks, we need to extract the actual query
-            # Many classification tasks follow the format:
-            # "question...\nResponse:" and we need to complete with a category
+            # For any task: Handle empty context by checking if there's a document with query
+            if not context and hasattr(request, 'doc'):
+                doc = request.doc
+                if isinstance(doc, dict) and 'query' in doc:
+                    context = doc['query']
+                    logging.info(f"Using document query from request.doc")
+            
+            # Skip empty requests that can't be recovered
+            if not context:
+                logging.warning("Received empty request with no recoverable context, returning empty string")
+                results.append("")
+                continue
             
             # Convert the context to a message format for the API
             messages = [{"role": "user", "content": context}]
             
-            # Create the generation payload
-            # For classification tasks, we need a higher max_tokens to ensure we get a complete response
-            max_tokens = min(100, self._max_gen_toks)  # Ensure we have enough tokens for a complete response
-            
-            payload = self._create_payload(
-                messages=messages,
-                generate=True,
-                gen_kwargs={"until": until, "max_tokens": max_tokens},
-                temperature=0.0  # Use temperature 0 for greedy generation
-            )
+            # Use a reasonable max_tokens value that works for all tasks
+            max_tokens = min(200, self._max_gen_toks) 
             
             try:
-                # Call the API to generate a response
+                # Create the payload
+                payload = self._create_payload(
+                    messages=messages,
+                    generate=True,
+                    gen_kwargs={"until": until, "max_tokens": max_tokens},
+                    temperature=0.0  # Use temperature 0 for greedy generation
+                )
+                
+                # Make the API request
                 response = self._make_request(payload)
                 
-                # Parse the response to extract the generated text
+                # Parse the generated text
                 generations = self.parse_generations(response)
                 
-                if not generations:
-                    eval_logger.warning(f"Empty generation for context: {context[:100]}...")
+                # Handle the case where generations might be empty
+                if not generations or not generations[0]:
+                    logging.warning("Received empty generation, returning empty string")
                     results.append("")
-                    continue
-                
-                # Ensure we only have one generation and trim at the stop sequence
-                result = generations[0].strip()
-                
-                # For Spanish classification tasks (FLARE), make sure we have a valid category
-                if "multifin" in context and "etiqueta adecuada" in context:
-                    # Get the categories from the prompt
-                    categories = ["Negocios y Gestión", "Finanzas", "Gobierno y Control", 
-                                 "Industria", "Impuestos y Contabilidad", "Tecnología"]
+                else:
+                    # Add to cache if available
+                    result = generations[0]
+                    if self.cache_hook is not None:
+                        self.cache_hook.add_partial('greedy_until', (context, until), result)
+                    results.append(result)
                     
-                    # Check if any category is in the response
-                    found_category = None
-                    for category in categories:
-                        if category in result:
-                            found_category = category
-                            break
-                    
-                    # If no category found, try to determine the most likely one
-                    if not found_category:
-                        # Just return the most likely category based on the prompt
-                        if "Retail" in context or "Consumo" in context or "Pharma" in context or "Sanidad" in context:
-                            result = "Industria"
-                        elif "Tax" in context or "Impuestos" in context or "auditoría" in context:
-                            result = "Impuestos y Contabilidad"
-                        elif "Digital" in context or "Ciberseguridad" in context:
-                            result = "Tecnología"
-                        elif "Bancaria" in context or "adquisiciones" in context or "M&A" in context:
-                            result = "Finanzas"
-                        elif "países" in context or "economías" in context:
-                            result = "Gobierno y Control"
-                        else:
-                            result = "Negocios y Gestión"
-                    else:
-                        result = found_category
-                
-                # Truncate at any stop sequence
-                for stop_seq in (until if isinstance(until, list) else [until]):
-                    if stop_seq and stop_seq in result:
-                        result = result.split(stop_seq)[0]
-                
-                # Add to cache if we have a cache_hook
-                if self.cache_hook is not None:
-                    self.cache_hook.add_partial('greedy_until', (context, until), result)
-                
-                results.append(result)
-                
             except Exception as e:
-                eval_logger.error(f"Error in greedy_until: {str(e)}")
-                # Return empty string on error
+                logging.error(f"Error in greedy_until: {e}")
+                import traceback
+                logging.error(traceback.format_exc())
                 results.append("")
-        
+                
         return results
 
     def _make_request(self, payload):
         """
-        Make a request to the API with the given payload.
+        Make an API request with the given payload.
         
         Args:
-            payload: The payload to send to the API
+            payload: Dict containing the request payload
             
         Returns:
-            The response from the API
+            Dict containing the API response
         """
         import requests
         import json
-        
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
-        }
+        import logging
+        import traceback
         
         try:
+            logging.debug(f"Making API request to: {self._base_url}")
+            
+            # Add API key to headers
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.api_key}"
+            }
+            
+            # Make the request to the API
             response = requests.post(
-                self.base_url,
+                self._base_url,
                 headers=headers,
-                data=json.dumps(payload),
-                timeout=120
+                json=payload,
+                timeout=120  # Increase timeout for larger requests
             )
-            response.raise_for_status()
-            return response.json()
+            
+            # Check if the request was successful
+            if response.status_code != 200:
+                error_message = f"API request failed with status code {response.status_code}: {response.text}"
+                logging.error(error_message)
+                # Return a structured error format that can be handled by parse methods
+                return {
+                    "error": error_message,
+                    "choices": [{"message": {"content": ""}}]
+                }
+            
+            # Parse the response
+            result = response.json()
+            logging.debug(f"API response received successfully")
+            
+            return result
+            
         except Exception as e:
-            eval_logger.error(f"API request failed: {str(e)}")
-            raise
+            logging.error(f"Error making API request: {str(e)}")
+            logging.error(traceback.format_exc())
+            # Return an error response that can be handled by parse methods
+            return {
+                "error": str(e),
+                "choices": [{"message": {"content": ""}}]
+            }
 
 
 @register_model(
